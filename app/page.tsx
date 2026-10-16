@@ -132,13 +132,8 @@ export default function Home() {
             <a href="/account" aria-label="Account" className="hidden transition-colors hover:text-[#59634b] sm:block">
               <UserRound size={20} strokeWidth={1.6} />
             </a>
-            <a href="/cart" aria-label="Shopping bag" className="relative transition-colors hover:text-[#59634b]">
+            <a href="/cart" aria-label="Shopping bag" className="transition-colors hover:text-[#59634b]">
               <ShoppingBag size={20} strokeWidth={1.6} />
-              {wishlist.length > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#59634b] px-1 text-[9px] text-white">
-                  {wishlist.length}
-                </span>
-              )}
             </a>
           </div>
         </div>
