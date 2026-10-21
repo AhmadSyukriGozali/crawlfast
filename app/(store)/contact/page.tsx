@@ -22,14 +22,14 @@ const CHANNELS = [
   {
     icon: MessageCircle,
     title: "WhatsApp",
-    value: "+62 812-3456-7890",
+    value: "+62 812-9237-7128",
     href: SITE.whatsapp,
     note: "Senin–Jumat, 09.00–17.00 WIB.",
   },
-  {
+  { 
     icon: Camera,
     title: "Instagram",
-    value: "@crawlfast",
+    value: "@crawlfast.std",
     href: SITE.instagram,
     note: "Update koleksi dan behind the scenes.",
   },

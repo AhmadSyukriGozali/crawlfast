@@ -12,7 +12,8 @@ import {
   Truck,
 } from "lucide-react";
 import FeaturedCollection from "@/components/home/FeaturedCollection";
-import { getProduct } from "@/lib/catalog";
+import { getStoreCategories } from "@/lib/categories/data";
+import { getStoreProducts } from "@/lib/products/data";
 import { formatRupiah } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -68,8 +69,21 @@ const TESTIMONIALS = [
   },
 ];
 
-export default function HomePage() {
-  const heroProduct = getProduct("essential-boxy-tee");
+export default async function HomePage() {
+  const [products, categories] = await Promise.all([
+    getStoreProducts(),
+    getStoreCategories(),
+  ]);
+  const usedCategories = categories.filter((category) =>
+    products.some((product) => product.category === category.name),
+  );
+  const featuredCategory =
+    usedCategories.find((category) => category.name === "Outerwear") ??
+    usedCategories[0];
+  const heroProduct =
+    products.find((product) => product.slug === "essential-boxy-tee") ??
+    products.find((product) => product.featured) ??
+    products[0];
 
   return (
     <>
@@ -221,7 +235,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <FeaturedCollection />
+      <FeaturedCollection products={products} />
 
       {/* Lookbook editorial */}
       <section id="lookbook" className="bg-sand/60 py-16 sm:py-20">
@@ -274,10 +288,14 @@ export default function HomePage() {
             </ul>
 
             <Link
-              href="/products?category=Outerwear"
+              href={
+                featuredCategory
+                  ? `/products?category=${encodeURIComponent(featuredCategory.name)}`
+                  : "/products"
+              }
               className="btn btn-primary mt-8 group"
             >
-              Belanja outerwear
+              Belanja {featuredCategory?.name.toLowerCase() ?? "koleksi"}
               <ArrowRight
                 size={15}
                 className="transition-transform group-hover:translate-x-1"

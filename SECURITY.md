@@ -12,7 +12,7 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 ## Cakupan
 
 - Aplikasi storefront dan panel admin
-- API checkout, pelacakan pesanan, dan notifikasi Midtrans
+- API checkout, pelacakan pesanan, notifikasi Midtrans, serta API admin produk/diskon
 - Konfigurasi header, CSP, dan autentikasi
 
 ## Kontrol Keamanan
@@ -35,7 +35,9 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 - Body JSON dibaca secara streaming, dihentikan saat melewati batas ukuran, dan wajib `Content-Type: application/json`.
 - Route browser memeriksa `Origin`/`Sec-Fetch-Site`.
 - Rate limit untuk checkout, tracking, dan endpoint admin.
-- Harga, ongkir, dan total selalu dihitung ulang dari katalog server.
+- Harga, ongkir, total, dan kode diskon selalu dihitung ulang dari database server.
+- Mutasi produk/kategori/diskon hanya lewat API admin yang memverifikasi token, allowlist, dan rate limit.
+- Upload gambar dibatasi ukuran, MIME type, dan disimpan dengan nama acak di bucket publik.
 - Respons API memakai `Cache-Control: no-store` dan `X-Content-Type-Options: nosniff`.
 
 ### Pembayaran
@@ -47,7 +49,7 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 - Service role key hanya dipakai di server (`server-only`).
 
 ### Data
-- RLS aktif pada tabel pesanan; tidak ada policy publik.
+- RLS aktif pada tabel pesanan, produk, kategori, dan diskon. Produk hanya punya policy baca untuk produk aktif; kategori hanya punya policy baca untuk kategori aktif; diskon tidak punya policy publik.
 - Data pelacakan mengembalikan field terbatas dan membutuhkan nomor pesanan + email.
 - Tidak ada penyimpanan data kartu di aplikasi.
 
@@ -58,7 +60,7 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 - [ ] `SUPABASE_SECRET_KEY` tidak ada di bundle client (cek Network/JS).
 - [ ] Public signup Supabase dimatikan.
 - [ ] Email admin terverifikasi dan allowlist benar.
-- [ ] RLS aktif; tidak ada policy `anon` pada `orders`/`order_items`.
+- [ ] RLS aktif; tidak ada policy `anon` pada `orders`, `order_items`, dan `discounts`; `categories` hanya punya policy baca untuk kategori aktif.
 - [ ] Notification URL Midtrans sudah diarahkan ke domain produksi.
 - [ ] Ganti email/WhatsApp placeholder di `lib/site.ts`.
 - [ ] Uji rate limit di balik reverse proxy dan pastikan header IP tepercaya.

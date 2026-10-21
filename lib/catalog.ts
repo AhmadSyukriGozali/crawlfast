@@ -1,10 +1,12 @@
-export type ProductCategory =
-  | "T-Shirts"
-  | "Outerwear"
-  | "Bottoms"
-  | "Knitwear"
-  | "Shirts"
-  | "Accessories";
+// Kategori sekarang dikelola lewat tabel `categories`. Tipe ini sengaja
+// dibuat longgar agar kategori baru dari admin langsung bisa dipakai.
+export type ProductCategory = string;
+
+export type ProductTag =
+  | "BESTSELLER"
+  | "NEW ARRIVAL"
+  | "POPULAR"
+  | "LIMITED";
 
 export type Product = {
   id: number;
@@ -13,7 +15,7 @@ export type Product = {
   category: ProductCategory;
   price: number;
   compareAtPrice?: number;
-  tag?: "BESTSELLER" | "NEW ARRIVAL" | "POPULAR" | "LIMITED";
+  tag?: ProductTag;
   image: string;
   imageAlt: string;
   tint: string;
@@ -24,6 +26,7 @@ export type Product = {
   reviewCount: number;
   createdAt: string;
   featured?: boolean;
+  isActive?: boolean;
 };
 
 export const PRODUCTS: readonly Product[] = [
@@ -314,39 +317,49 @@ export const CATEGORIES: readonly ProductCategory[] = [
   "Accessories",
 ];
 
-export const ALL_SIZES = ["S", "M", "L", "XL", "All Size"] as const;
+export const ALL_SIZES = [
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "All Size",
+] as const;
 
-export const PRODUCT_BY_ID = new Map<number, Product>(
-  PRODUCTS.map((product) => [product.id, product]),
-);
+export const PRODUCT_TAGS: readonly ProductTag[] = [
+  "BESTSELLER",
+  "NEW ARRIVAL",
+  "POPULAR",
+  "LIMITED",
+];
 
-export const PRODUCT_BY_SLUG = new Map<string, Product>(
-  PRODUCTS.map((product) => [product.slug, product]),
-);
-
-export function getProduct(slugOrId: string): Product | undefined {
-  const bySlug = PRODUCT_BY_SLUG.get(slugOrId);
+export function getProductFromList(
+  products: readonly Product[],
+  slugOrId: string,
+): Product | undefined {
+  const bySlug = products.find((product) => product.slug === slugOrId);
   if (bySlug) return bySlug;
 
   if (/^\d+$/.test(slugOrId)) {
-    return PRODUCT_BY_ID.get(Number(slugOrId));
+    return products.find((product) => product.id === Number(slugOrId));
   }
 
   return undefined;
 }
 
-export function getProductById(id: number): Product | undefined {
-  return PRODUCT_BY_ID.get(id);
-}
-
-export function getRelatedProducts(product: Product, limit = 4): Product[] {
+export function getRelatedProducts(
+  products: readonly Product[],
+  product: Product,
+  limit = 4,
+): Product[] {
   const seenImages = new Set<string>([product.image]);
 
-  return PRODUCTS.filter(
-    (candidate) =>
-      candidate.id !== product.id && candidate.category === product.category,
-  )
-    .concat(PRODUCTS.filter((candidate) => candidate.id !== product.id))
+  return products
+    .filter(
+      (candidate) =>
+        candidate.id !== product.id && candidate.category === product.category,
+    )
+    .concat(products.filter((candidate) => candidate.id !== product.id))
     .filter((candidate, index, list) => {
       if (list.findIndex((item) => item.id === candidate.id) !== index) {
         return false;
@@ -362,12 +375,18 @@ export function getRelatedProducts(product: Product, limit = 4): Product[] {
     .slice(0, limit);
 }
 
-export function getFeaturedProducts(limit = 4): Product[] {
-  return PRODUCTS.filter((product) => product.featured).slice(0, limit);
+export function getFeaturedProducts(
+  products: readonly Product[],
+  limit = 4,
+): Product[] {
+  return products.filter((product) => product.featured).slice(0, limit);
 }
 
-export function getNewArrivals(limit = 8): Product[] {
-  return [...PRODUCTS]
+export function getNewArrivals(
+  products: readonly Product[],
+  limit = 8,
+): Product[] {
+  return [...products]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
 }

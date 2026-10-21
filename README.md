@@ -6,11 +6,11 @@ Storefront fashion esensial dengan katalog, keranjang, wishlist, **checkout Midt
 
 ### Storefront
 - Landing page editorial dengan hero, marquee, koleksi pilihan, lookbook, value props, dan testimoni.
-- Katalog 12 produk dengan filter kategori, pencarian, dan sorting (client-side, instan).
+- Katalog produk dari Supabase dengan filter kategori, pencarian, dan sorting (client-side, instan).
 - Halaman detail produk dengan metadata SEO, JSON-LD, ukuran, quantity, wishlist, dan produk terkait.
 - Keranjang persisten di `localStorage`, progress gratis ongkir, dan ringkasan biaya.
 - Wishlist persisten dengan halaman khusus.
-- Checkout dengan validasi form, honeypot anti-bot, ringkasan pesanan, dan redirect aman ke Midtrans.
+- Checkout dengan validasi form, honeypot anti-bot, kode promo/diskon, ringkasan pesanan, dan redirect aman ke Midtrans.
 - Halaman hasil checkout dan **lacak pesanan** menggunakan nomor pesanan + email.
 - Halaman About, FAQ, Shipping, Returns, Size Guide, Contact, Privacy, Terms, dan 404/error pages.
 - SEO: metadata per halaman, canonical, Open Graph/Twitter image, sitemap, robots, manifest, dan favicon.
@@ -19,7 +19,10 @@ Storefront fashion esensial dengan katalog, keranjang, wishlist, **checkout Midt
 ### Admin
 - Login admin berbasis Supabase Auth + allowlist email (`ADMIN_EMAIL` / `ADMIN_EMAILS`).
 - Dashboard pesanan: metrik, grafik revenue, status pembayaran, filter tanggal/status, pencarian, dan pagination.
-- Detail pesanan lengkap.
+- Detail pesanan lengkap, termasuk kode dan nominal diskon.
+- Manajemen produk: tambah, ubah, hapus, upload gambar, atur harga, ukuran, label, featured, dan status tayang.
+- Manajemen kategori: tambah, ubah, hapus, atur urutan, dan status tampil. Kategori yang masih dipakai produk tidak bisa dihapus.
+- Manajemen diskon: kode promo persen/nominal, minimal belanja, maksimal potongan, masa berlaku, dan kuota pemakaian.
 - Endpoint admin diverifikasi di server pada setiap request (token Bearer), bukan hanya di UI.
 
 ## Menjalankan
@@ -56,10 +59,12 @@ Lihat `.env.example`. Ringkasan:
 2. Nonaktifkan **public signup** di Authentication → Providers → Email, karena akun admin dibuat manual.
 3. Buat user admin di Authentication → Users, lalu isi emailnya di `ADMIN_EMAIL`.
 4. Pastikan email admin sudah terverifikasi (`email_confirmed_at` terisi).
+5. Jalankan migrasi [`supabase/migrations/001_products_and_discounts.sql`](./supabase/migrations/001_products_and_discounts.sql) lalu [`supabase/migrations/002_categories.sql`](./supabase/migrations/002_categories.sql) di **Supabase Dashboard → SQL Editor**. Migrasi pertama membuat tabel `products`, `discounts`, kolom diskon di `orders`, seed 12 produk awal, dan bucket storage `product-images`. Migrasi kedua membuat tabel `categories`, menghubungkan `products.category` ke kategori, dan menambahkan dukungan ukuran `XXL`.
+6. Pastikan bucket `product-images` bersifat public (migrasi mengaturnya otomatis) agar gambar hasil upload bisa tampil.
 
 ### Tabel yang dibutuhkan
 
-Aplikasi mengharapkan tabel `orders` dan `order_items`. Jika belum ada, gunakan referensi SQL berikut (sesuaikan dengan schema yang sudah berjalan):
+Aplikasi mengharapkan tabel `products`, `categories`, `discounts`, `orders`, dan `order_items`. File migrasi di atas adalah sumber utama untuk schema baru. Referensi SQL `orders`/`order_items` berikut berguna jika project lama belum memilikinya (sesuaikan dengan schema yang sudah berjalan):
 
 ```sql
 create extension if not exists "pgcrypto";
@@ -77,6 +82,9 @@ create table if not exists public.orders (
   customer_notes text,
   subtotal integer not null check (subtotal >= 0),
   shipping_cost integer not null check (shipping_cost >= 0),
+  discount_code text,
+  discount_amount integer not null default 0 check (discount_amount >= 0),
+  discount_id uuid,
   total_amount integer not null check (total_amount >= 0),
   currency text not null default 'IDR',
   order_status text not null default 'pending_payment',
@@ -130,7 +138,8 @@ Lapisan keamanan yang sudah diterapkan:
 
 - **Security headers**: CSP, HSTS (production), `X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP, dan `poweredByHeader: false` (lihat `next.config.ts`).
 - **Admin**: token diverifikasi ke Supabase di server, allowlist email, cek email terverifikasi, rate limit, respons `no-store`.
-- **Checkout**: origin check (CSRF), rate limit per IP, batas ukuran body, validasi field, whitelist produk/ukuran dari katalog server, harga & ongkir dihitung ulang di server, honeypot, dan validasi redirect Midtrans.
+- **Checkout**: origin check (CSRF), rate limit per IP, batas ukuran body, validasi field, whitelist produk/ukuran dari database, harga & ongkir dihitung ulang di server, validasi kode diskon dan kuota secara atomik, honeypot, dan validasi redirect Midtrans.
+- **Admin produk, kategori & diskon**: semua mutasi lewat route handler dengan verifikasi token admin, validasi input server-side, rate limit, dan invalidasi cache produk/kategori. Upload gambar dibatasi 5 MB serta tipe JPEG/PNG/WEBP/AVIF.
 - **Pembayaran**: signature SHA-512 dengan `timingSafeEqual`, verifikasi nominal, proteksi notifikasi duplikat/terlambat/bersamaan dengan optimistic concurrency, dan pencatatan payload.
 - **Pelacakan pesanan**: butuh nomor pesanan + email yang cocok, rate limit, dan hanya mengembalikan data terbatas (tanpa alamat/telepon).
 - **404 produk**: slug/ID divalidasi di `proxy.ts`, sehingga URL produk yang tidak ada langsung mengembalikan status 404 (bukan soft 404).
@@ -150,12 +159,13 @@ npm run lint   # ESLint
 
 ## Aset Gambar
 
-Foto produk dan editorial disimpan lokal di [`public/products`](./public/products) dan [`public/editorial`](./public/editorial), sehingga storefront tidak bergantung pada host gambar eksternal. Semua foto berasal dari [Unsplash](https://unsplash.com) dan digunakan sesuai [Unsplash License](https://unsplash.com/license). Ganti dengan foto milik sendiri sebelum produksi jika diperlukan.
+Foto produk awal dan editorial disimpan lokal di [`public/products`](./public/products) dan [`public/editorial`](./public/editorial). Admin juga bisa meng-upload gambar produk baru ke Supabase Storage bucket `product-images` (maksimal 5 MB; JPEG/PNG/WEBP/AVIF). Semua foto awal berasal dari [Unsplash](https://unsplash.com) dan digunakan sesuai [Unsplash License](https://unsplash.com/license). Ganti dengan foto milik sendiri sebelum produksi jika diperlukan.
 
 ## Catatan & Batasan
 
 - Keranjang dan wishlist disimpan di browser (belum tersinkron ke akun).
 - Rate limit menggunakan memori proses. Untuk deployment multi-instance/serverless, gunakan Redis/Upstash.
 - Login pelanggan, riwayat pesanan otomatis, dan email transaksional belum diimplementasikan.
-- Produk masih berupa katalog statis di `lib/catalog.ts`; untuk skala besar, pindahkan ke database/CMS.
+- Produk disimpan di Supabase. Katalog statis di `lib/catalog.ts` hanya dipakai sebagai fallback sementara jika tabel `products` belum dibuat.
+- Kategori disimpan di tabel `categories`. Daftar statis di `lib/catalog.ts` hanya dipakai sebagai fallback jika tabel `categories` belum dibuat.
 - Ganti alamat email, WhatsApp, dan sosial media placeholder di `lib/site.ts` sebelum go-live.

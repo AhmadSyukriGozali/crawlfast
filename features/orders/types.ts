@@ -20,6 +20,8 @@ export type Order = {
   customer_notes?: string | null;
   subtotal: number;
   shipping_cost: number;
+  discount_code?: string | null;
+  discount_amount?: number;
   total_amount: number;
   currency: string;
   order_status: string;

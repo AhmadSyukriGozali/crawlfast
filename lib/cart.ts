@@ -1,4 +1,4 @@
-import { getProductById, isProductSize, PRODUCTS } from "@/lib/catalog";
+import { isProductSize, type Product } from "@/lib/catalog";
 import { MAX_QUANTITY_PER_ITEM } from "@/lib/shipping";
 
 export type CartItem = {
@@ -13,6 +13,7 @@ export type CartItem = {
 
 export type LegacyCartItem = {
   productId?: unknown;
+  slug?: unknown;
   name?: unknown;
   price?: unknown;
   image?: unknown;
@@ -24,29 +25,47 @@ export const CART_KEY = "crawlfast-cart";
 export const CART_EVENT = "crawlfast-cart-updated";
 export const MAX_CART_LINES = 30;
 
-const PRODUCT_IDS = new Set(PRODUCTS.map((product) => product.id));
-
+/**
+ * Cart menyimpan snapshot produk di browser. Validasi harga dan stok tetap
+ * dilakukan ulang oleh server saat checkout, jadi data lama tidak bisa
+ * dipakai untuk mengubah total pembayaran.
+ */
 export function normalizeCartItem(value: unknown): CartItem | null {
   if (value === null || typeof value !== "object") return null;
 
   const item = value as LegacyCartItem;
   const productId = Number(item.productId);
-  const product = getProductById(productId);
-
-  if (!product || !PRODUCT_IDS.has(productId)) return null;
-
+  const slug = typeof item.slug === "string" ? item.slug.trim() : "";
+  const name = typeof item.name === "string" ? item.name.trim() : "";
+  const price = Number(item.price);
+  const image = typeof item.image === "string" ? item.image.trim() : "";
   const size = typeof item.size === "string" ? item.size.trim() : "";
-  if (!isProductSize(size) || !product.sizes.includes(size)) return null;
-
   const quantity = Math.floor(Number(item.quantity));
-  if (!Number.isInteger(quantity) || quantity < 1) return null;
+
+  if (
+    !Number.isInteger(productId) ||
+    productId <= 0 ||
+    slug.length < 1 ||
+    slug.length > 120 ||
+    name.length < 1 ||
+    name.length > 160 ||
+    !Number.isSafeInteger(price) ||
+    price <= 0 ||
+    image.length < 1 ||
+    image.length > 600 ||
+    !isProductSize(size) ||
+    !Number.isInteger(quantity) ||
+    quantity < 1
+  ) {
+    return null;
+  }
 
   return {
-    productId: product.id,
-    slug: product.slug,
-    name: product.name,
-    price: product.price,
-    image: product.image,
+    productId,
+    slug,
+    name,
+    price,
+    image,
     size,
     quantity: Math.min(quantity, MAX_QUANTITY_PER_ITEM),
   };
@@ -87,12 +106,15 @@ export function cartCount(items: CartItem[]): number {
 
 export function addItemToCart(
   items: CartItem[],
-  productId: number,
+  product: Product,
   size: string,
   quantity = 1,
 ): CartItem[] {
-  const product = getProductById(productId);
-  if (!product || !isProductSize(size) || !product.sizes.includes(size)) {
+  if (
+    product.isActive === false ||
+    !isProductSize(size) ||
+    !product.sizes.includes(size)
+  ) {
     return items;
   }
 

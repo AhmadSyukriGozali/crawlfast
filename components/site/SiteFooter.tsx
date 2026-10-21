@@ -31,7 +31,23 @@ function LinkColumn({
   );
 }
 
-export default function SiteFooter() {
+export default function SiteFooter({
+  categories = [],
+}: {
+  categories?: string[];
+}) {
+  const shopLinks =
+    categories.length > 0
+      ? [
+          { href: "/products", label: "Semua produk" },
+          ...categories.map((category) => ({
+            href: `/products?category=${encodeURIComponent(category)}`,
+            label: category,
+          })),
+          { href: "/wishlist", label: "Wishlist" },
+        ]
+      : FOOTER_LINKS.shop;
+
   return (
     <footer className="mt-auto bg-ink text-white">
       <div className="container-page">
@@ -68,7 +84,7 @@ export default function SiteFooter() {
             </div>
           </div>
 
-          <LinkColumn title="Belanja" links={FOOTER_LINKS.shop} />
+          <LinkColumn title="Belanja" links={shopLinks} />
           <LinkColumn title="Bantuan" links={FOOTER_LINKS.help} />
           <LinkColumn title="Perusahaan" links={FOOTER_LINKS.company} />
         </div>

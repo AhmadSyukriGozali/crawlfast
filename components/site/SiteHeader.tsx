@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import Logo from "@/components/brand/Logo";
-import { PRODUCTS } from "@/lib/catalog";
+import type { Product } from "@/lib/catalog";
 import { useCart } from "@/lib/hooks/useCart";
 import { useWishlist } from "@/lib/hooks/useWishlist";
 import { formatRupiah } from "@/lib/format";
@@ -31,7 +31,11 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
-export default function SiteHeader() {
+export default function SiteHeader({
+  products = [],
+}: {
+  products?: Product[];
+}) {
   const pathname = usePathname();
   const { totalItems } = useCart();
   const { count: wishlistCount } = useWishlist();
@@ -91,13 +95,15 @@ export default function SiteHeader() {
     const term = query.trim().toLowerCase();
     if (!term) return [];
 
-    return PRODUCTS.filter(
-      (product) =>
-        product.name.toLowerCase().includes(term) ||
-        product.category.toLowerCase().includes(term) ||
-        product.description.toLowerCase().includes(term),
-    ).slice(0, 5);
-  }, [query]);
+    return products
+      .filter(
+        (product) =>
+          product.name.toLowerCase().includes(term) ||
+          product.category.toLowerCase().includes(term) ||
+          product.description.toLowerCase().includes(term),
+      )
+      .slice(0, 5);
+  }, [products, query]);
 
   return (
     <>

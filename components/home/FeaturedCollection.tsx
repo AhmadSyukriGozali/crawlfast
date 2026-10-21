@@ -4,7 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
-import { getFeaturedProducts, getNewArrivals, PRODUCTS } from "@/lib/catalog";
+import {
+  getFeaturedProducts,
+  getNewArrivals,
+  type Product,
+} from "@/lib/catalog";
 
 const TABS = [
   { id: "featured", label: "Pilihan editor" },
@@ -14,14 +18,18 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-export default function FeaturedCollection() {
+export default function FeaturedCollection({
+  products,
+}: {
+  products: Product[];
+}) {
   const [tab, setTab] = useState<TabId>("featured");
 
-  const products = useMemo(() => {
-    if (tab === "new") return getNewArrivals(8);
-    if (tab === "all") return PRODUCTS.slice(0, 8);
-    return getFeaturedProducts(4);
-  }, [tab]);
+  const visibleProducts = useMemo(() => {
+    if (tab === "new") return getNewArrivals(products, 8);
+    if (tab === "all") return products.slice(0, 8);
+    return getFeaturedProducts(products, 4);
+  }, [products, tab]);
 
   return (
     <section
@@ -60,7 +68,7 @@ export default function FeaturedCollection() {
       </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-9 sm:gap-x-5 lg:grid-cols-4 lg:gap-x-6">
-        {products.map((product, index) => (
+        {visibleProducts.map((product, index) => (
           <ProductCard
             key={product.id}
             product={product}

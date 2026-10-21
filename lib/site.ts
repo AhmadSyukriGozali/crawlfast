@@ -10,8 +10,8 @@ export const SITE = {
     "http://localhost:3000",
   locale: "id_ID",
   email: "hello@crawlfast.store",
-  instagram: "https://instagram.com/crawlfast",
-  whatsapp: "https://wa.me/6281234567890",
+  instagram: "https://www.instagram.com/crawlfast.std/",
+  whatsapp: "https://wa.me/6281292377128",
   city: "Jakarta, Indonesia",
 } as const;
 

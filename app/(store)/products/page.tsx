@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import ProductsBrowser from "@/components/store/ProductsBrowser";
-import { PRODUCTS } from "@/lib/catalog";
+import { getStoreCategories } from "@/lib/categories/data";
+import { getStoreProducts } from "@/lib/products/data";
 
 export const metadata: Metadata = {
   title: "Semua Produk",
@@ -11,7 +12,17 @@ export const metadata: Metadata = {
   alternates: { canonical: "/products" },
 };
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const [products, categories] = await Promise.all([
+    getStoreProducts(),
+    getStoreCategories(),
+  ]);
+  const productCategories = categories
+    .filter((category) =>
+      products.some((product) => product.category === category.name),
+    )
+    .map((category) => category.name);
+
   return (
     <div className="container-page pb-16 pt-8 sm:pb-20 sm:pt-10">
       <Link
@@ -24,7 +35,7 @@ export default function ProductsPage() {
 
       <header className="mt-6 grid gap-6 border-b border-line pb-8 sm:mt-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
         <div>
-          <p className="eyebrow">The collection / {PRODUCTS.length} pieces</p>
+          <p className="eyebrow">The collection / {products.length} pieces</p>
           <h1 className="display mt-4 text-5xl sm:text-6xl lg:text-7xl">
             Semua <span className="serif-accent">produk.</span>
           </h1>
@@ -35,7 +46,7 @@ export default function ProductsPage() {
         </p>
       </header>
 
-      <ProductsBrowser />
+      <ProductsBrowser products={products} categories={productCategories} />
     </div>
   );
 }

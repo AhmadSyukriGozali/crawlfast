@@ -10,7 +10,7 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data:",
+  "img-src 'self' blob: data: https://*.supabase.co",
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co" +
     (isProduction ? "" : " ws://localhost:* http://localhost:*"),
@@ -54,6 +54,13 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     dangerouslyAllowSVG: false,
     minimumCacheTTL: 60 * 60 * 24,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/product-images/**",
+      },
+    ],
   },
   async headers() {
     return [

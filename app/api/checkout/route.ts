@@ -1,7 +1,20 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getProductById, isProductSize } from "@/lib/catalog";
+import { isProductSize } from "@/lib/catalog";
+import { getCheckoutProducts } from "@/lib/products/data";
+import { calculateDiscount } from "@/lib/discounts/calculate";
+import {
+  claimDiscountUsage,
+  getDiscountByCode,
+  isMissingDiscountsTable,
+  releaseDiscountUsage,
+} from "@/lib/discounts/data";
+import {
+  DISCOUNT_CODE_PATTERN,
+  type Discount,
+} from "@/lib/discounts/constants";
+import { normalizeDiscountCode } from "@/lib/discounts/validation";
 import { calculateShipping, calculateTotal } from "@/lib/shipping";
 import { getClientIp, rateLimit } from "@/lib/security/rate-limit";
 import { isSameOrigin, readJsonBody } from "@/lib/security/request";
@@ -34,6 +47,7 @@ type CheckoutBody = {
     company?: unknown;
   };
   items?: unknown;
+  discountCode?: unknown;
 };
 
 function jsonError(message: string, status: number) {
@@ -147,15 +161,10 @@ export async function POST(request: Request) {
       );
     }
 
-    let subtotal = 0;
     const seenItems = new Set<string>();
-
-    const normalizedItems: {
-      product_id: number;
-      product_name: string;
-      product_image: string;
+    const parsedItems: {
+      productId: number;
       size: string;
-      unit_price: number;
       quantity: number;
     }[] = [];
 
@@ -163,14 +172,12 @@ export async function POST(request: Request) {
       const productId = Number(rawItem?.productId);
       const size = cleanText(rawItem?.size, 20);
       const quantity = Number(rawItem?.quantity);
-      const product = getProductById(productId);
       const itemKey = `${productId}:${size}`;
 
       if (
         !Number.isInteger(productId) ||
-        !product ||
+        productId <= 0 ||
         !isProductSize(size) ||
-        !product.sizes.includes(size) ||
         !Number.isInteger(quantity) ||
         quantity < 1 ||
         quantity > MAX_QUANTITY ||
@@ -183,23 +190,105 @@ export async function POST(request: Request) {
       }
 
       seenItems.add(itemKey);
-      subtotal += product.price * quantity;
+      parsedItems.push({ productId, size, quantity });
+    }
+
+    const productMap = await getCheckoutProducts(
+      parsedItems.map((item) => item.productId),
+    );
+
+    let subtotal = 0;
+    const normalizedItems: {
+      product_id: number;
+      product_name: string;
+      product_image: string;
+      size: string;
+      unit_price: number;
+      quantity: number;
+    }[] = [];
+
+    for (const item of parsedItems) {
+      const product = productMap.get(item.productId);
+
+      if (
+        !product ||
+        product.isActive === false ||
+        !product.sizes.includes(item.size)
+      ) {
+        return jsonError(
+          "Produk atau ukuran sudah tidak tersedia. Perbarui keranjang.",
+          400,
+        );
+      }
+
+      subtotal += product.price * item.quantity;
 
       normalizedItems.push({
         product_id: product.id,
         product_name: product.name,
         product_image: product.image,
-        size,
+        size: item.size,
         unit_price: product.price,
-        quantity,
+        quantity: item.quantity,
       });
     }
 
+    const rawDiscountCode = cleanText(body?.discountCode, 32);
+    const discountCode = rawDiscountCode
+      ? normalizeDiscountCode(rawDiscountCode)
+      : "";
+
+    let appliedDiscount: Discount | null = null;
+    let discountAmount = 0;
+
+    if (discountCode) {
+      if (!DISCOUNT_CODE_PATTERN.test(discountCode)) {
+        return jsonError("Format kode diskon tidak valid.", 400);
+      }
+
+      let discount: Discount | undefined;
+
+      try {
+        discount = await getDiscountByCode(discountCode);
+      } catch (error) {
+        if (
+          error &&
+          typeof error === "object" &&
+          isMissingDiscountsTable(
+            error as { code?: string; message?: string },
+          )
+        ) {
+          return jsonError("Layanan diskon belum tersedia.", 503);
+        }
+
+        throw error;
+      }
+
+      if (!discount) {
+        return jsonError(
+          "Kode diskon tidak ditemukan atau tidak berlaku.",
+          400,
+        );
+      }
+
+      const discountResult = calculateDiscount(discount, subtotal);
+
+      if (!discountResult.ok) {
+        return jsonError(discountResult.error, 400);
+      }
+
+      appliedDiscount = discount;
+      discountAmount = discountResult.amount;
+    }
+
     const shippingCost = calculateShipping(subtotal);
-    const totalAmount = calculateTotal(subtotal);
+    const totalAmount = calculateTotal(subtotal) - discountAmount;
 
     if (totalAmount <= 0 || !Number.isSafeInteger(totalAmount)) {
-      return jsonError("Total pesanan tidak valid.", 400);
+      return jsonError(
+        "Total setelah diskon harus lebih dari Rp 0. Kurangi nilai diskon.",
+        400,
+      );
     }
 
     const orderNumber = `CF-${Date.now()}-${randomBytes(4).toString("hex")}`;
@@ -212,6 +301,16 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminClient();
+
+    if (
+      appliedDiscount &&
+      !(await claimDiscountUsage(appliedDiscount))
+    ) {
+      return jsonError(
+        "Kuota kode diskon baru saja habis. Silakan gunakan kode lain.",
+        409,
+      );
+    }
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -232,12 +331,24 @@ export async function POST(request: Request) {
         order_status: "pending_payment",
         payment_status: "pending",
         payment_gateway: "midtrans",
+        ...(appliedDiscount
+          ? {
+              discount_code: appliedDiscount.code,
+              discount_amount: discountAmount,
+              discount_id: appliedDiscount.id,
+            }
+          : {}),
       })
       .select("id, order_number")
       .single();
 
     if (orderError || !order) {
       console.error("Failed to create order:", orderError?.message);
+
+      if (appliedDiscount) {
+        await releaseDiscountUsage(appliedDiscount);
+      }
+
       return jsonError(
         "Pesanan belum bisa disimpan. Silakan coba lagi.",
         500,
@@ -262,6 +373,10 @@ export async function POST(request: Request) {
         })
         .eq("id", order.id);
 
+      if (appliedDiscount) {
+        await releaseDiscountUsage(appliedDiscount);
+      }
+
       return jsonError("Detail produk pesanan gagal disimpan.", 500);
     }
 
@@ -281,49 +396,84 @@ export async function POST(request: Request) {
       });
     }
 
+    if (discountAmount > 0 && appliedDiscount) {
+      itemDetails.push({
+        id: "discount",
+        price: -discountAmount,
+        quantity: 1,
+        name: `Diskon ${appliedDiscount.code}`.slice(0, 50),
+      });
+    }
+
     const midtransUrl = isProduction
       ? "https://app.midtrans.com/snap/v1/transactions"
       : "https://app.sandbox.midtrans.com/snap/v1/transactions";
 
-    const paymentResponse = await fetch(midtransUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${serverKey}:`).toString("base64")}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        transaction_details: {
-          order_id: order.order_number,
-          gross_amount: totalAmount,
+    let paymentResponse: Response;
+
+    try {
+      paymentResponse = await fetch(midtransUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${serverKey}:`).toString("base64")}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        item_details: itemDetails,
-        customer_details: {
-          first_name: name.slice(0, 50),
-          email,
-          phone,
-          billing_address: {
-            first_name: name.slice(0, 50),
-            address: address.slice(0, 200),
-            city: city.slice(0, 50),
-            postal_code: postalCode,
-            country_code: "IDN",
+        body: JSON.stringify({
+          transaction_details: {
+            order_id: order.order_number,
+            gross_amount: totalAmount,
           },
-          shipping_address: {
+          item_details: itemDetails,
+          customer_details: {
             first_name: name.slice(0, 50),
-            address: address.slice(0, 200),
-            city: city.slice(0, 50),
-            postal_code: postalCode,
-            country_code: "IDN",
+            email,
+            phone,
+            billing_address: {
+              first_name: name.slice(0, 50),
+              address: address.slice(0, 200),
+              city: city.slice(0, 50),
+              postal_code: postalCode,
+              country_code: "IDN",
+            },
+            shipping_address: {
+              first_name: name.slice(0, 50),
+              address: address.slice(0, 200),
+              city: city.slice(0, 50),
+              postal_code: postalCode,
+              country_code: "IDN",
+            },
           },
-        },
-        callbacks: {
-          finish: `${resolveSiteOrigin(request)}/checkout/result?order_id=${encodeURIComponent(order.order_number)}`,
-        },
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
-    });
+          callbacks: {
+            finish: `${resolveSiteOrigin(request)}/checkout/result?order_id=${encodeURIComponent(order.order_number)}`,
+          },
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (paymentError) {
+      console.error(
+        "Midtrans request failed:",
+        paymentError instanceof Error ? paymentError.message : "Unknown error",
+      );
+
+      await supabase
+        .from("orders")
+        .update({
+          order_status: "cancelled",
+          payment_status: "failure",
+        })
+        .eq("id", order.id);
+
+      if (appliedDiscount) {
+        await releaseDiscountUsage(appliedDiscount);
+      }
+
+      return jsonError(
+        "Pesanan tersimpan, tetapi halaman pembayaran gagal dibuat. Silakan coba lagi.",
+        502,
+      );
+    }
 
     const paymentData = (await paymentResponse.json().catch(() => null)) as {
       token?: unknown;
@@ -347,6 +497,10 @@ export async function POST(request: Request) {
           payment_status: "failure",
         })
         .eq("id", order.id);
+
+      if (appliedDiscount) {
+        await releaseDiscountUsage(appliedDiscount);
+      }
 
       return jsonError(
         "Pesanan tersimpan, tetapi halaman pembayaran gagal dibuat. Silakan coba lagi.",

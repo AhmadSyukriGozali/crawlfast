@@ -230,6 +230,17 @@ export default function OrderDetailClient() {
                 <span className="text-slate-500">Ongkos kirim</span>
                 <span>{money.format(Number(order.shipping_cost) || 0)}</span>
               </div>
+              {Number(order.discount_amount) > 0 && (
+                <div className="flex justify-between gap-4 text-emerald-700">
+                  <span>
+                    Diskon
+                    {order.discount_code ? ` (${order.discount_code})` : ""}
+                  </span>
+                  <span>
+                    -{money.format(Number(order.discount_amount) || 0)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between gap-4 border-t border-slate-200 pt-3 text-base font-bold">
                 <span>Total</span>
                 <span>

@@ -3,8 +3,15 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import CatalogBrowser from "@/components/store/CatalogBrowser";
+import type { Product } from "@/lib/catalog";
 
-function CatalogWithParams() {
+function CatalogWithParams({
+  products,
+  categories,
+}: {
+  products: Product[];
+  categories: string[];
+}) {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
   const category = searchParams.get("category") ?? "";
@@ -13,6 +20,8 @@ function CatalogWithParams() {
   return (
     <CatalogBrowser
       key={`${q}|${category}|${sort}`}
+      products={products}
+      categories={categories}
       initialQuery={q}
       initialCategory={category}
       initialSort={sort}
@@ -20,7 +29,13 @@ function CatalogWithParams() {
   );
 }
 
-export default function ProductsBrowser() {
+export default function ProductsBrowser({
+  products,
+  categories,
+}: {
+  products: Product[];
+  categories: string[];
+}) {
   return (
     <Suspense
       fallback={
@@ -29,7 +44,7 @@ export default function ProductsBrowser() {
         </div>
       }
     >
-      <CatalogWithParams />
+      <CatalogWithParams products={products} categories={categories} />
     </Suspense>
   );
 }

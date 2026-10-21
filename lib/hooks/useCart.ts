@@ -12,6 +12,7 @@ import {
   updateCartQuantity,
   type CartItem,
 } from "@/lib/cart";
+import type { Product } from "@/lib/catalog";
 
 const EMPTY_CART: CartItem[] = [];
 let lastRaw: string | null | undefined;
@@ -61,8 +62,8 @@ export function useCart() {
   const items = useSyncExternalStore(subscribe, readCart, () => EMPTY_CART);
 
   const addItem = useCallback(
-    (productId: number, size: string, quantity = 1) =>
-      writeCart(addItemToCart(readCart(), productId, size, quantity)),
+    (product: Product, size: string, quantity = 1) =>
+      writeCart(addItemToCart(readCart(), product, size, quantity)),
     [],
   );
 

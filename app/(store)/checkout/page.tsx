@@ -38,6 +38,14 @@ const initialForm: CheckoutForm = {
   company: "",
 };
 
+type AppliedDiscount = {
+  code: string;
+  amount: number;
+  label: string;
+  description?: string | null;
+  subtotal: number;
+};
+
 const inputClass = "field mt-2";
 const labelClass = "field-label";
 
@@ -51,8 +59,63 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] =
+    useState<AppliedDiscount | null>(null);
+  const [discountError, setDiscountError] = useState("");
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
+
   const shipping = useMemo(() => calculateShipping(subtotal), [subtotal]);
-  const total = subtotal + shipping;
+  const activeDiscount =
+    appliedDiscount?.subtotal === subtotal ? appliedDiscount : null;
+  const discountAmount = activeDiscount?.amount ?? 0;
+  const total = Math.max(0, subtotal - discountAmount + shipping);
+
+  async function applyDiscount() {
+    const code = discountCode.trim().toUpperCase();
+
+    if (!code) {
+      setDiscountError("Masukkan kode promo terlebih dahulu.");
+      return;
+    }
+
+    setCheckingDiscount(true);
+    setDiscountError("");
+
+    try {
+      const response = await fetch("/api/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal }),
+      });
+
+      const result = (await response.json().catch(() => null)) as
+        | (AppliedDiscount & { error?: string })
+        | null;
+
+      if (!response.ok || !result || !result.code) {
+        throw new Error(result?.error || "Kode promo tidak valid.");
+      }
+
+      setAppliedDiscount({
+        code: result.code,
+        amount: result.amount,
+        label: result.label,
+        description: result.description,
+        subtotal,
+      });
+      setDiscountCode(result.code);
+    } catch (discountFailure) {
+      setAppliedDiscount(null);
+      setDiscountError(
+        discountFailure instanceof Error
+          ? discountFailure.message
+          : "Kode promo gagal diperiksa.",
+      );
+    } finally {
+      setCheckingDiscount(false);
+    }
+  }
 
   function updateField(field: keyof CheckoutForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -99,6 +162,7 @@ export default function CheckoutPage() {
             size: item.size,
             quantity: item.quantity,
           })),
+          discountCode: activeDiscount?.code ?? "",
         }),
       });
 
@@ -428,6 +492,71 @@ export default function CheckoutPage() {
               Ringkasan pesanan
             </h2>
 
+            <div className="mt-4 border border-line p-3">
+              <label
+                htmlFor="discount-code"
+                className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft"
+              >
+                Kode promo
+              </label>
+
+              {activeDiscount ? (
+                <div className="mt-2 flex items-center justify-between gap-3 bg-sage/10 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-sage">
+                      {activeDiscount.code}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-ink-soft">
+                      {activeDiscount.label} ·{" "}
+                      {formatRupiah(activeDiscount.amount)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedDiscount(null);
+                      setDiscountCode("");
+                      setDiscountError("");
+                    }}
+                    className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-muted underline underline-offset-4 hover:text-red-700"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="discount-code"
+                    value={discountCode}
+                    onChange={(event) =>
+                      setDiscountCode(event.target.value.toUpperCase())
+                    }
+                    maxLength={32}
+                    placeholder="Contoh: WELCOME10"
+                    className="field min-h-10 min-w-0 flex-1 py-2 text-xs uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void applyDiscount()}
+                    disabled={
+                      checkingDiscount ||
+                      subtotal <= 0 ||
+                      discountCode.trim().length === 0
+                    }
+                    className="shrink-0 border border-ink px-3 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {checkingDiscount ? "Cek..." : "Terapkan"}
+                  </button>
+                </div>
+              )}
+
+              {discountError && (
+                <p role="alert" className="mt-2 text-[10px] leading-4 text-red-700">
+                  {discountError}
+                </p>
+              )}
+            </div>
+
             <div className="mt-5 max-h-80 divide-y divide-line overflow-y-auto border-y border-line pr-1">
               {items.map((item) => (
                 <div
@@ -471,6 +600,14 @@ export default function CheckoutPage() {
                   {shipping === 0 ? "Gratis" : formatRupiah(shipping)}
                 </span>
               </div>
+              {activeDiscount && (
+                <div className="flex items-center justify-between gap-3 text-sage">
+                  <span>Diskon ({activeDiscount.code})</span>
+                  <span className="font-medium">
+                    -{formatRupiah(activeDiscount.amount)}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between gap-3 py-5">

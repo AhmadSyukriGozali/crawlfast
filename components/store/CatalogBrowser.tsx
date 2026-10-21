@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
-import { CATEGORIES, PRODUCTS, type ProductCategory } from "@/lib/catalog";
+import type { Product } from "@/lib/catalog";
 
 type SortOption = "featured" | "new" | "price-asc" | "price-desc" | "rating";
 
@@ -16,32 +16,34 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 ];
 
 export default function CatalogBrowser({
+  products,
+  categories,
   initialQuery = "",
   initialCategory = "",
   initialSort = "featured",
 }: {
+  products: Product[];
+  categories: string[];
   initialQuery?: string;
   initialCategory?: string;
   initialSort?: string;
 }) {
-  const safeCategory = CATEGORIES.includes(
-    initialCategory as ProductCategory,
-  )
-    ? (initialCategory as ProductCategory)
+  const safeCategory = categories.includes(initialCategory)
+    ? initialCategory
     : null;
 
   const safeSort = SORT_OPTIONS.some((option) => option.value === initialSort)
     ? (initialSort as SortOption)
     : "featured";
 
-  const [category, setCategory] = useState<ProductCategory | null>(safeCategory);
+  const [category, setCategory] = useState<string | null>(safeCategory);
   const [query, setQuery] = useState(initialQuery.slice(0, 80));
   const [sort, setSort] = useState<SortOption>(safeSort);
 
-  const products = useMemo(() => {
+  const filteredProducts = useMemo(() => {
     const term = query.trim().toLowerCase();
 
-    const filtered = PRODUCTS.filter((product) => {
+    const filtered = products.filter((product) => {
       const matchesCategory = !category || product.category === category;
       const matchesTerm =
         !term ||
@@ -66,7 +68,7 @@ export default function CatalogBrowser({
           return Number(Boolean(b.featured)) - Number(Boolean(a.featured));
       }
     });
-  }, [category, query, sort]);
+  }, [category, products, query, sort]);
 
   const activeFilters = (category ? 1 : 0) + (query.trim() ? 1 : 0);
 
@@ -88,7 +90,7 @@ export default function CatalogBrowser({
               Semua
             </button>
 
-            {CATEGORIES.map((item) => (
+            {categories.map((item) => (
               <button
                 key={item}
                 type="button"
@@ -142,7 +144,8 @@ export default function CatalogBrowser({
 
       <div className="flex items-center justify-between gap-4 py-5 text-[10px] uppercase tracking-[0.12em] text-ink-muted">
         <span>
-          {products.length} produk{activeFilters ? " ditemukan" : " tersedia"}
+          {filteredProducts.length} produk
+          {activeFilters ? " ditemukan" : " tersedia"}
         </span>
         {activeFilters > 0 && (
           <button
@@ -158,9 +161,9 @@ export default function CatalogBrowser({
         )}
       </div>
 
-      {products.length > 0 ? (
+      {filteredProducts.length > 0 ? (
         <div className="grid grid-cols-2 gap-x-3 gap-y-9 sm:gap-x-5 lg:grid-cols-3 lg:gap-x-6 xl:grid-cols-4">
-          {products.map((product, index) => (
+          {filteredProducts.map((product, index) => (
             <ProductCard
               key={product.id}
               product={product}

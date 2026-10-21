@@ -5,16 +5,23 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Star } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
 import ProductPurchase from "@/components/product/ProductPurchase";
-import { getProduct, getRelatedProducts, PRODUCTS } from "@/lib/catalog";
+import { getRelatedProducts } from "@/lib/catalog";
+import { getStoreProduct, getStoreProducts } from "@/lib/products/data";
 import { formatRupiah } from "@/lib/format";
 import { SITE } from "@/lib/site";
+
+// Halaman detail bergantung pada slug dan data produk dari database. Navigasi
+// ke halaman ini memang boleh menunggu data, jadi opt-out dari validasi instant.
+export const instant = false;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return PRODUCTS.flatMap((product) => [
+export async function generateStaticParams() {
+  const products = await getStoreProducts();
+
+  return products.flatMap((product) => [
     { slug: product.slug },
     { slug: String(product.id) },
   ]);
@@ -24,7 +31,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getStoreProduct(slug);
 
   if (!product) {
     return {
@@ -55,11 +62,14 @@ export async function generateMetadata({
 
 export default async function ProductDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const [product, products] = await Promise.all([
+    getStoreProduct(slug),
+    getStoreProducts(),
+  ]);
 
   if (!product) notFound();
 
-  const related = getRelatedProducts(product);
+  const related = getRelatedProducts(products, product);
   const inStock = true;
 
   const productJsonLd = {

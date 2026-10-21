@@ -35,7 +35,7 @@ export default function ProductPurchase({ product }: { product: Product }) {
       return;
     }
 
-    const success = addItem(product.id, size, quantity);
+    const success = addItem(product, size, quantity);
 
     if (!success) {
       setError(

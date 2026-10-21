@@ -1,15 +1,28 @@
+import Link from "next/link";
+
+type AdminSection = "orders" | "products" | "categories" | "discounts";
+
 type Props = {
   email: string;
   loading: boolean;
   onRefresh: () => void;
   onLogout: () => void;
+  active?: AdminSection;
 };
+
+const NAV_ITEMS: { key: AdminSection; href: string; label: string }[] = [
+  { key: "orders", href: "/admin", label: "Pesanan" },
+  { key: "products", href: "/admin/products", label: "Produk" },
+  { key: "categories", href: "/admin/categories", label: "Kategori" },
+  { key: "discounts", href: "/admin/discounts", label: "Diskon" },
+];
 
 export default function AdminHeader({
   email,
   loading,
   onRefresh,
   onLogout,
+  active = "orders",
 }: Props) {
   return (
     <aside className="border-b border-white/10 bg-ink text-white">
@@ -32,6 +45,25 @@ export default function AdminHeader({
             ADMIN
           </span>
         </div>
+
+        <nav
+          aria-label="Navigasi admin"
+          className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1"
+        >
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                active === item.key
+                  ? "bg-white text-ink"
+                  : "text-white/65 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="hidden text-right sm:block">
