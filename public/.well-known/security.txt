@@ -1,0 +1,6 @@
+Contact: mailto:hello@crawlfast.store
+Contact: https://crawlfast.store/contact
+Expires: 2027-10-20T00:00:00.000Z
+Preferred-Languages: id, en
+Canonical: https://crawlfast.store/.well-known/security.txt
+Policy: https://crawlfast.store/privacy

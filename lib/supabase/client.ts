@@ -1,8 +1,10 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
-let browserClient: ReturnType<typeof createSupabaseClient> | undefined;
+type BrowserClient = ReturnType<typeof createSupabaseClient>;
 
-export function createBrowserSupabaseClient() {
+let browserClient: BrowserClient | undefined;
+
+export function createBrowserSupabaseClient(): BrowserClient {
   if (browserClient) return browserClient;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,6 +14,14 @@ export function createBrowserSupabaseClient() {
     throw new Error("Supabase public environment variables are missing.");
   }
 
-  browserClient = createSupabaseClient(supabaseUrl, supabaseKey);
+  browserClient = createSupabaseClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
+    },
+  });
+
   return browserClient;
 }

@@ -1,7 +1,8 @@
 
 import { createHash, timingSafeEqual } from "node:crypto";
-import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { noStoreJson, readJsonBody } from "@/lib/security/request";
+import { isOrderNumber } from "@/lib/security/validate";
 
 type MidtransNotification = {
   order_id?: string;
@@ -46,28 +47,25 @@ const REVERSAL_STATUSES = new Set([
 ]);
 
 function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+  return noStoreJson({ error: message }, { status });
 }
 
 export async function POST(request: Request) {
-  // Parse the request separately so malformed JSON returns HTTP 400.
-  let notification: MidtransNotification;
+  // Midtrans memanggil endpoint ini server-to-server, jadi tidak ada
+  // pengecekan Origin. Keaslian request diverifikasi lewat signature SHA-512.
+  const bodyResult = await readJsonBody(request, 32 * 1024);
 
-  try {
-    const body: unknown = await request.json();
+  if (!bodyResult.ok) {
+    return jsonError("Invalid notification payload.", bodyResult.status);
+  }
 
-    if (
-      typeof body !== "object" ||
-      body === null ||
-      Array.isArray(body)
-    ) {
-      return jsonError("Invalid notification payload.", 400);
-    }
+  const body: unknown = bodyResult.data;
 
-    notification = body as MidtransNotification;
-  } catch {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return jsonError("Invalid notification payload.", 400);
   }
+
+  const notification = body as MidtransNotification;
 
   try {
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
@@ -85,8 +83,7 @@ export async function POST(request: Request) {
 
     if (
       typeof orderNumber !== "string" ||
-      orderNumber.length < 1 ||
-      orderNumber.length > 100 ||
+      !isOrderNumber(orderNumber) ||
       typeof statusCode !== "string" ||
       !/^\d{3}$/.test(statusCode) ||
       typeof grossAmount !== "string" ||
@@ -118,115 +115,153 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
-    const { data: order, error: findError } = await supabase
-      .from("orders")
-      .select(
-        "id, total_amount, payment_status, order_status, paid_at",
-      )
-      .eq("order_number", orderNumber)
-      .maybeSingle();
+    // Optimistic concurrency: notifikasi Midtrans bisa datang bersamaan.
+    // Update hanya boleh menang jika status yang kita baca belum berubah.
+    // Jika kalah balapan, baca ulang dan evaluasi lagi (maksimal 2 putaran).
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const { data: order, error: findError } = await supabase
+        .from("orders")
+        .select(
+          "id, total_amount, payment_status, order_status, paid_at",
+        )
+        .eq("order_number", orderNumber)
+        .maybeSingle();
 
-    if (findError) {
-      console.error("Order lookup failed:", findError.message);
-      return jsonError("Could not look up order.", 500);
-    }
+      if (findError) {
+        console.error("Order lookup failed:", findError.message);
+        return jsonError("Could not look up order.", 500);
+      }
 
-    if (!order) {
-      return jsonError("Order not found.", 404);
-    }
+      if (!order) {
+        return jsonError("Order not found.", 404);
+      }
 
-    const notifiedAmount = Number(grossAmount);
-    const storedAmount = Number(order.total_amount);
+      const notifiedAmount = Number(grossAmount);
+      const storedAmount = Number(order.total_amount);
 
-    if (
-      !Number.isSafeInteger(notifiedAmount) ||
-      !Number.isSafeInteger(storedAmount) ||
-      notifiedAmount !== storedAmount
-    ) {
-      return jsonError("Payment amount does not match order.", 400);
-    }
+      if (
+        !Number.isSafeInteger(notifiedAmount) ||
+        !Number.isSafeInteger(storedAmount) ||
+        notifiedAmount !== storedAmount
+      ) {
+        return jsonError("Payment amount does not match order.", 400);
+      }
 
-    // A card capture is successful only when Midtrans confirms acceptance.
-    // Challenge, deny, or missing fraud status must not mark an order as paid.
-    let effectiveStatus = rawStatus;
+      // A card capture is successful only when Midtrans confirms acceptance.
+      // Challenge, deny, or missing fraud status must not mark an order as paid.
+      let effectiveStatus = rawStatus;
 
-    if (rawStatus === "capture") {
-      if (notification.fraud_status === "accept") {
-        effectiveStatus = "capture";
-      } else if (notification.fraud_status === "deny") {
-        effectiveStatus = "deny";
-      } else {
-        effectiveStatus = "pending";
+      if (rawStatus === "capture") {
+        if (notification.fraud_status === "accept") {
+          effectiveStatus = "capture";
+        } else if (notification.fraud_status === "deny") {
+          effectiveStatus = "deny";
+        } else {
+          effectiveStatus = "pending";
+        }
+      }
+
+      const currentStatus = String(order.payment_status ?? "");
+
+      const currentIsSuccessful = SUCCESS_STATUSES.has(currentStatus);
+      const currentIsFailure = FAILURE_STATUSES.has(currentStatus);
+      const incomingIsSuccessful = SUCCESS_STATUSES.has(effectiveStatus);
+      const incomingIsFailure = FAILURE_STATUSES.has(effectiveStatus);
+      const currentIsReversed = REVERSAL_STATUSES.has(currentStatus);
+      const incomingIsReversal = REVERSAL_STATUSES.has(effectiveStatus);
+
+      // Do not let any older pending/failure/authorize notification undo a
+      // successful payment. Only success duplicates and reversals may pass.
+      if (
+        currentIsSuccessful &&
+        !incomingIsSuccessful &&
+        !incomingIsReversal
+      ) {
+        return noStoreJson({ received: true });
+      }
+
+      // A late pending/authorize must not resurrect an order that already
+      // expired, failed, or was cancelled. A genuine settlement may still pass.
+      if (
+        currentIsFailure &&
+        (effectiveStatus === "pending" || effectiveStatus === "authorize")
+      ) {
+        return noStoreJson({ received: true });
+      }
+
+      // Once a refund or chargeback is recorded, do not let an older
+      // payment notification restore the order to a successful state.
+      if (currentIsReversed && !incomingIsReversal) {
+        return noStoreJson({ received: true });
+      }
+
+      const now = new Date().toISOString();
+
+      const updateData: Record<string, unknown> = {
+        payment_status: effectiveStatus,
+        payment_reference:
+          typeof notification.transaction_id === "string"
+            ? notification.transaction_id.slice(0, 128)
+            : orderNumber,
+        payment_payload: {
+          order_id: orderNumber,
+          status_code: statusCode,
+          gross_amount: grossAmount,
+          transaction_status: rawStatus,
+          transaction_id:
+            typeof notification.transaction_id === "string"
+              ? notification.transaction_id.slice(0, 128)
+              : null,
+          payment_type:
+            typeof notification.payment_type === "string"
+              ? notification.payment_type.slice(0, 50)
+              : null,
+          fraud_status:
+            typeof notification.fraud_status === "string"
+              ? notification.fraud_status.slice(0, 50)
+              : null,
+        },
+        updated_at: now,
+      };
+
+      if (incomingIsSuccessful) {
+        updateData.order_status = "processing";
+
+        // Keep the original paid timestamp on duplicate success notifications.
+        updateData.paid_at = order.paid_at ?? now;
+      } else if (incomingIsFailure) {
+        updateData.order_status = "cancelled";
+        // Intentionally preserve paid_at instead of clearing payment history.
+      } else if (
+        effectiveStatus === "pending" ||
+        effectiveStatus === "authorize"
+      ) {
+        updateData.order_status = "pending_payment";
+      }
+
+      // Refund and chargeback notifications update payment_status only.
+      // They do not automatically erase the order's processing history.
+      const { data: updatedOrder, error: updateError } = await supabase
+        .from("orders")
+        .update(updateData)
+        .eq("id", order.id)
+        .eq("payment_status", currentStatus)
+        .select("id")
+        .maybeSingle();
+
+      if (updateError) {
+        console.error("Payment update failed:", updateError.message);
+        return jsonError("Could not update payment status.", 500);
+      }
+
+      // Notifikasi lain sudah mengubah status lebih dulu. Ulangi evaluasi
+      // agar hasil akhir tetap konsisten (mis. success tidak kalah oleh expire).
+      if (updatedOrder) {
+        return noStoreJson({ received: true });
       }
     }
 
-    const currentStatus = String(order.payment_status ?? "");
-
-    const currentIsSuccessful = SUCCESS_STATUSES.has(currentStatus);
-    const incomingIsSuccessful = SUCCESS_STATUSES.has(effectiveStatus);
-    const incomingIsFailure = FAILURE_STATUSES.has(effectiveStatus);
-    const currentIsReversed = REVERSAL_STATUSES.has(currentStatus);
-    const incomingIsReversal = REVERSAL_STATUSES.has(effectiveStatus);
-
-    // Do not let an old pending/failure notification undo a successful payment.
-    if (
-      currentIsSuccessful &&
-      (incomingIsFailure || effectiveStatus === "pending")
-    ) {
-      return NextResponse.json({ received: true });
-    }
-
-    // Once a refund or chargeback is recorded, do not let an older
-    // payment notification restore the order to a successful state.
-    if (currentIsReversed && !incomingIsReversal) {
-      return NextResponse.json({ received: true });
-    }
-
-    const now = new Date().toISOString();
-
-    const updateData: Record<string, unknown> = {
-      payment_status: effectiveStatus,
-      payment_reference: notification.transaction_id ?? orderNumber,
-      payment_payload: {
-        order_id: orderNumber,
-        status_code: statusCode,
-        gross_amount: grossAmount,
-        transaction_status: rawStatus,
-        transaction_id: notification.transaction_id ?? null,
-        payment_type: notification.payment_type ?? null,
-        fraud_status: notification.fraud_status ?? null,
-      },
-      updated_at: now,
-    };
-
-    if (incomingIsSuccessful) {
-      updateData.order_status = "processing";
-
-      // Keep the original paid timestamp on duplicate success notifications.
-      updateData.paid_at = order.paid_at ?? now;
-    } else if (incomingIsFailure) {
-      updateData.order_status = "cancelled";
-      // Intentionally preserve paid_at instead of clearing payment history.
-    } else if (
-      effectiveStatus === "pending" ||
-      effectiveStatus === "authorize"
-    ) {
-      updateData.order_status = "pending_payment";
-    }
-
-    // Refund and chargeback notifications update payment_status only.
-    // They do not automatically erase the order's processing history.
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update(updateData)
-      .eq("id", order.id);
-
-    if (updateError) {
-      console.error("Payment update failed:", updateError.message);
-      return jsonError("Could not update payment status.", 500);
-    }
-
-    return NextResponse.json({ received: true });
+    return noStoreJson({ received: true });
   } catch (error) {
     console.error(
       "Payment notification error:",
