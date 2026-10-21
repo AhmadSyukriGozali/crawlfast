@@ -2,15 +2,146 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useAdminOrderDetail } from "@/features/orders/hooks/useAdminOrderDetail";
+import type { Order } from "@/features/orders/types";
 import { formatDate, formatStatus, money } from "@/features/orders/utils";
+
+const PAYMENT_STATUS_OPTIONS = [
+  { value: "pending", label: "Menunggu pembayaran" },
+  { value: "settlement", label: "Lunas (settlement)" },
+  { value: "capture", label: "Lunas (capture)" },
+  { value: "expire", label: "Kedaluwarsa" },
+  { value: "cancel", label: "Dibatalkan" },
+  { value: "deny", label: "Ditolak" },
+] as const;
+
+const ORDER_STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "pending_payment", label: "Menunggu pembayaran" },
+  { value: "processing", label: "Diproses" },
+  { value: "shipped", label: "Dikirim" },
+  { value: "completed", label: "Selesai" },
+  { value: "cancelled", label: "Dibatalkan" },
+] as const;
+
+function OrderStatusForm({
+  order,
+  updateStatus,
+}: {
+  order: Order;
+  updateStatus: (
+    paymentStatus: string,
+    orderStatus: string,
+  ) => Promise<void>;
+}) {
+  const [paymentStatus, setPaymentStatus] = useState(
+    order.payment_status || "pending",
+  );
+  const [orderStatus, setOrderStatus] = useState(
+    order.order_status || "pending_payment",
+  );
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [statusError, setStatusError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+
+  async function handleStatusUpdate() {
+    setSavingStatus(true);
+    setStatusError("");
+    setStatusMessage("");
+
+    try {
+      await updateStatus(paymentStatus, orderStatus);
+      setStatusMessage("Status pesanan berhasil diperbarui.");
+    } catch (updateError) {
+      setStatusError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Status pesanan gagal diperbarui.",
+      );
+    } finally {
+      setSavingStatus(false);
+    }
+  }
+
+  return (
+    <div className="mt-5 border-t border-slate-200 pt-5">
+      <h3 className="text-sm font-semibold">Ubah status manual</h3>
+      <p className="mt-1 text-xs leading-5 text-slate-500">
+        Gunakan bagian ini untuk mengonfirmasi pembayaran WhatsApp atau
+        memperbarui proses pesanan. Status lunas akan mengisi tanggal
+        pembayaran otomatis.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="text-sm font-medium text-slate-700">
+          Status pembayaran
+          <select
+            value={paymentStatus}
+            onChange={(event) => {
+              setPaymentStatus(event.target.value);
+              setStatusMessage("");
+            }}
+            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal outline-none focus:border-emerald-500"
+          >
+            {PAYMENT_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-sm font-medium text-slate-700">
+          Status pesanan
+          <select
+            value={orderStatus}
+            onChange={(event) => {
+              setOrderStatus(event.target.value);
+              setStatusMessage("");
+            }}
+            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal outline-none focus:border-emerald-500"
+          >
+            {ORDER_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {statusError && (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {statusError}
+        </p>
+      )}
+
+      {statusMessage && (
+        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {statusMessage}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={() => void handleStatusUpdate()}
+        disabled={savingStatus}
+        className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-50"
+      >
+        {savingStatus ? "Menyimpan..." : "Simpan status"}
+      </button>
+    </div>
+  );
+}
 
 export default function OrderDetailClient() {
   const params = useParams<{ id: string }>();
   const id = typeof params.id === "string" ? params.id : "";
 
-  const { order, loading, error, loadOrder } = useAdminOrderDetail(id);
+  const { order, loading, error, loadOrder, updateStatus } =
+    useAdminOrderDetail(id);
 
   if (loading) {
     return (
@@ -169,6 +300,12 @@ export default function OrderDetailClient() {
               </span>
             </div>
           </div>
+
+          <OrderStatusForm
+            key={order.id}
+            order={order}
+            updateStatus={updateStatus}
+          />
         </section>
 
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">

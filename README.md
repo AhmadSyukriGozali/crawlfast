@@ -1,6 +1,6 @@
 # CRAWLFAST Store
 
-Storefront fashion esensial dengan katalog, keranjang, wishlist, **checkout Midtrans**, pelacakan pesanan, halaman informasi, dan panel admin. Dibangun dengan **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS v4**, dan **Supabase**.
+Storefront fashion esensial dengan katalog, keranjang, wishlist, **checkout Midtrans & WhatsApp manual**, pelacakan pesanan, halaman informasi, dan panel admin. Dibangun dengan **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS v4**, dan **Supabase**.
 
 ## Fitur
 
@@ -10,7 +10,7 @@ Storefront fashion esensial dengan katalog, keranjang, wishlist, **checkout Midt
 - Halaman detail produk dengan metadata SEO, JSON-LD, ukuran, quantity, wishlist, dan produk terkait.
 - Keranjang persisten di `localStorage`, progress gratis ongkir, dan ringkasan biaya.
 - Wishlist persisten dengan halaman khusus.
-- Checkout dengan validasi form, honeypot anti-bot, kode promo/diskon, ringkasan pesanan, dan redirect aman ke Midtrans.
+- Checkout dengan validasi form, honeypot anti-bot, kode promo/diskon, ringkasan pesanan, pilihan pembayaran Midtrans atau WhatsApp manual, dan redirect aman.
 - Halaman hasil checkout dan **lacak pesanan** menggunakan nomor pesanan + email.
 - Halaman About, FAQ, Shipping, Returns, Size Guide, Contact, Privacy, Terms, dan 404/error pages.
 - SEO: metadata per halaman, canonical, Open Graph/Twitter image, sitemap, robots, manifest, dan favicon.
@@ -19,10 +19,11 @@ Storefront fashion esensial dengan katalog, keranjang, wishlist, **checkout Midt
 ### Admin
 - Login admin berbasis Supabase Auth + allowlist email (`ADMIN_EMAIL` / `ADMIN_EMAILS`).
 - Dashboard pesanan: metrik, grafik revenue, status pembayaran, filter tanggal/status, pencarian, dan pagination.
-- Detail pesanan lengkap, termasuk kode dan nominal diskon.
+- Detail pesanan lengkap, termasuk kode dan nominal diskon, serta pembaruan status pembayaran/pesanan secara manual.
 - Manajemen produk: tambah, ubah, hapus, upload gambar, atur harga, ukuran, label, featured, dan status tayang.
 - Manajemen kategori: tambah, ubah, hapus, atur urutan, dan status tampil. Kategori yang masih dipakai produk tidak bisa dihapus.
 - Manajemen diskon: kode promo persen/nominal, minimal belanja, maksimal potongan, masa berlaku, dan kuota pemakaian.
+- Pengaturan pembayaran: aktifkan Midtrans dan/atau WhatsApp manual, atur nomor WhatsApp admin, dan edit template pesan WhatsApp.
 - Endpoint admin diverifikasi di server pada setiap request (token Bearer), bukan hanya di UI.
 
 ## Menjalankan
@@ -59,12 +60,12 @@ Lihat `.env.example`. Ringkasan:
 2. Nonaktifkan **public signup** di Authentication → Providers → Email, karena akun admin dibuat manual.
 3. Buat user admin di Authentication → Users, lalu isi emailnya di `ADMIN_EMAIL`.
 4. Pastikan email admin sudah terverifikasi (`email_confirmed_at` terisi).
-5. Jalankan migrasi [`supabase/migrations/001_products_and_discounts.sql`](./supabase/migrations/001_products_and_discounts.sql) lalu [`supabase/migrations/002_categories.sql`](./supabase/migrations/002_categories.sql) di **Supabase Dashboard → SQL Editor**. Migrasi pertama membuat tabel `products`, `discounts`, kolom diskon di `orders`, seed 12 produk awal, dan bucket storage `product-images`. Migrasi kedua membuat tabel `categories`, menghubungkan `products.category` ke kategori, dan menambahkan dukungan ukuran `XXL`.
+5. Jalankan migrasi [`supabase/migrations/001_products_and_discounts.sql`](./supabase/migrations/001_products_and_discounts.sql), lalu [`supabase/migrations/002_categories.sql`](./supabase/migrations/002_categories.sql), lalu [`supabase/migrations/003_payment_settings.sql`](./supabase/migrations/003_payment_settings.sql) di **Supabase Dashboard → SQL Editor**. Migrasi pertama membuat tabel `products`, `discounts`, kolom diskon di `orders`, seed 12 produk awal, dan bucket storage `product-images`. Migrasi kedua membuat tabel `categories`, menghubungkan `products.category` ke kategori, dan menambahkan dukungan ukuran `XXL`. Migrasi ketiga membuat tabel `payment_settings` untuk metode pembayaran dan template WhatsApp.
 6. Pastikan bucket `product-images` bersifat public (migrasi mengaturnya otomatis) agar gambar hasil upload bisa tampil.
 
 ### Tabel yang dibutuhkan
 
-Aplikasi mengharapkan tabel `products`, `categories`, `discounts`, `orders`, dan `order_items`. File migrasi di atas adalah sumber utama untuk schema baru. Referensi SQL `orders`/`order_items` berikut berguna jika project lama belum memilikinya (sesuaikan dengan schema yang sudah berjalan):
+Aplikasi mengharapkan tabel `products`, `categories`, `discounts`, `payment_settings`, `orders`, dan `order_items`. File migrasi di atas adalah sumber utama untuk schema baru. Referensi SQL `orders`/`order_items` berikut berguna jika project lama belum memilikinya (sesuaikan dengan schema yang sudah berjalan):
 
 ```sql
 create extension if not exists "pgcrypto";
@@ -124,6 +125,18 @@ alter table public.order_items enable row level security;
 
 > **RLS:** service role melewati RLS, jadi jangan pernah mengirim service role key ke client. Akses publik ke `orders`/`order_items` sebaiknya ditutup total.
 
+## Setup Metode Pembayaran
+
+1. Jalankan migrasi `003_payment_settings.sql`.
+2. Login admin, buka **Pembayaran** di panel admin.
+3. Aktifkan minimal satu metode:
+   - **Midtrans**: pelanggan diarahkan ke halaman Snap. `MIDTRANS_SERVER_KEY` tetap disimpan di environment server, bukan di database.
+   - **WhatsApp manual**: isi nomor WhatsApp admin (format `08xx` atau `62xx`) dan template pesan. Pesanan tetap disimpan sebagai `pending`, lalu pelanggan diarahkan ke `wa.me` dengan detail pesanan yang sudah terisi.
+4. Template WhatsApp mendukung placeholder: `{order_number}`, `{customer_name}`, `{customer_phone}`, `{customer_email}`, `{items}`, `{subtotal}`, `{shipping}`, `{discount}`, `{total}`, `{shipping_address}`, dan `{notes}`.
+5. Setelah pembayaran WhatsApp dikonfirmasi, admin membuka detail pesanan dan mengubah status pembayaran menjadi **Lunas** serta status pesanan sesuai prosesnya.
+
+> Jika tabel `payment_settings` belum ada, checkout otomatis memakai Midtrans selama `MIDTRANS_SERVER_KEY` tersedia. Halaman admin pembayaran akan menampilkan instruksi migrasi.
+
 ## Setup Midtrans
 
 1. Isi `MIDTRANS_SERVER_KEY` dan `MIDTRANS_IS_PRODUCTION`.
@@ -138,9 +151,9 @@ Lapisan keamanan yang sudah diterapkan:
 
 - **Security headers**: CSP, HSTS (production), `X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP, dan `poweredByHeader: false` (lihat `next.config.ts`).
 - **Admin**: token diverifikasi ke Supabase di server, allowlist email, cek email terverifikasi, rate limit, respons `no-store`.
-- **Checkout**: origin check (CSRF), rate limit per IP, batas ukuran body, validasi field, whitelist produk/ukuran dari database, harga & ongkir dihitung ulang di server, validasi kode diskon dan kuota secara atomik, honeypot, dan validasi redirect Midtrans.
-- **Admin produk, kategori & diskon**: semua mutasi lewat route handler dengan verifikasi token admin, validasi input server-side, rate limit, dan invalidasi cache produk/kategori. Upload gambar dibatasi 5 MB serta tipe JPEG/PNG/WEBP/AVIF.
-- **Pembayaran**: signature SHA-512 dengan `timingSafeEqual`, verifikasi nominal, proteksi notifikasi duplikat/terlambat/bersamaan dengan optimistic concurrency, dan pencatatan payload.
+- **Checkout**: origin check (CSRF), rate limit per IP, batas ukuran body, validasi field, whitelist produk/ukuran dari database, harga & ongkir dihitung ulang di server, validasi kode diskon dan kuota secara atomik, honeypot, validasi metode pembayaran, dan validasi redirect Midtrans/WhatsApp.
+- **Admin produk, kategori, diskon & pembayaran**: semua mutasi lewat route handler dengan verifikasi token admin, validasi input server-side, rate limit, dan invalidasi cache produk/kategori. Upload gambar dibatasi 5 MB serta tipe JPEG/PNG/WEBP/AVIF.
+- **Pembayaran**: signature SHA-512 dengan `timingSafeEqual`, verifikasi nominal, proteksi notifikasi duplikat/terlambat/bersamaan dengan optimistic concurrency, dan pencatatan payload. Pembayaran WhatsApp manual tidak memproses kredensial pembayaran; admin mengubah status setelah verifikasi.
 - **Pelacakan pesanan**: butuh nomor pesanan + email yang cocok, rate limit, dan hanya mengembalikan data terbatas (tanpa alamat/telepon).
 - **404 produk**: slug/ID divalidasi di `proxy.ts`, sehingga URL produk yang tidak ada langsung mengembalikan status 404 (bukan soft 404).
 - **Auth**: public signup tidak tersedia di UI, pesan error dinormalisasi agar tidak membocorkan detail, reset password via Supabase, dan flow PKCE.

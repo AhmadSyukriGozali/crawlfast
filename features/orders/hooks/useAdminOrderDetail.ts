@@ -104,6 +104,69 @@ export function useAdminOrderDetail(id: string) {
     }
   }, [id, router]);
 
+  const updateStatus = useCallback(
+    async (paymentStatus: string, orderStatus: string) => {
+      const supabase = createBrowserSupabaseClient();
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) throw sessionError;
+
+      if (!session) {
+        router.replace("/login");
+        throw new Error("Sesi login berakhir. Silakan login kembali.");
+      }
+
+      const response = await fetch(
+        `/api/admin/orders/${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ paymentStatus, orderStatus }),
+          cache: "no-store",
+        },
+      );
+
+      if (response.status === 401 || response.status === 403) {
+        await supabase.auth.signOut();
+        router.replace("/login");
+        throw new Error("Akses admin ditolak. Silakan login kembali.");
+      }
+
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+        payment_status?: string;
+        order_status?: string;
+        paid_at?: string | null;
+      } | null;
+
+      if (!response.ok || !result) {
+        throw new Error(result?.error || "Status pesanan gagal diperbarui.");
+      }
+
+      setOrder((current) =>
+        current
+          ? {
+              ...current,
+              payment_status: result.payment_status ?? current.payment_status,
+              order_status: result.order_status ?? current.order_status,
+              paid_at:
+                result.paid_at === undefined
+                  ? current.paid_at
+                  : result.paid_at,
+            }
+          : current,
+      );
+    },
+    [id, router],
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -121,5 +184,6 @@ export function useAdminOrderDetail(id: string) {
     loading,
     error,
     loadOrder,
+    updateStatus,
   };
 }

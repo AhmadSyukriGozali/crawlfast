@@ -16,6 +16,15 @@ import {
 } from "@/lib/discounts/constants";
 import { normalizeDiscountCode } from "@/lib/discounts/validation";
 import { calculateShipping, calculateTotal } from "@/lib/shipping";
+import { formatRupiah } from "@/lib/format";
+import { getPaymentSettings } from "@/lib/payments/data";
+import type { PaymentMethod } from "@/lib/payments/types";
+import {
+  buildWhatsAppUrl,
+  formatWhatsAppItems,
+  isValidWhatsAppNumber,
+  renderWhatsAppTemplate,
+} from "@/lib/payments/whatsapp";
 import { getClientIp, rateLimit } from "@/lib/security/rate-limit";
 import { isSameOrigin, readJsonBody } from "@/lib/security/request";
 import {
@@ -48,6 +57,7 @@ type CheckoutBody = {
   };
   items?: unknown;
   discountCode?: unknown;
+  paymentMethod?: unknown;
 };
 
 function jsonError(message: string, status: number) {
@@ -291,14 +301,44 @@ export async function POST(request: Request) {
       );
     }
 
-    const orderNumber = `CF-${Date.now()}-${randomBytes(4).toString("hex")}`;
-    const serverKey = process.env.MIDTRANS_SERVER_KEY;
-    const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
+    const rawPaymentMethod =
+      cleanText(body?.paymentMethod, 20).toLowerCase() || "midtrans";
 
-    if (!serverKey) {
-      console.error("MIDTRANS_SERVER_KEY is not configured.");
-      return jsonError("Konfigurasi pembayaran di server belum lengkap.", 500);
+    if (rawPaymentMethod !== "midtrans" && rawPaymentMethod !== "whatsapp") {
+      return jsonError("Metode pembayaran tidak valid.", 400);
     }
+
+    const paymentMethod = rawPaymentMethod as PaymentMethod;
+    const paymentSettings = await getPaymentSettings();
+
+    if (paymentMethod === "midtrans") {
+      if (!paymentSettings.midtransEnabled) {
+        return jsonError(
+          "Pembayaran Midtrans sedang tidak tersedia. Pilih metode lain.",
+          400,
+        );
+      }
+
+      if (!process.env.MIDTRANS_SERVER_KEY) {
+        console.error("MIDTRANS_SERVER_KEY is not configured.");
+        return jsonError("Konfigurasi pembayaran di server belum lengkap.", 500);
+      }
+    }
+
+    if (paymentMethod === "whatsapp") {
+      if (
+        !paymentSettings.whatsappEnabled ||
+        !isValidWhatsAppNumber(paymentSettings.whatsappNumber)
+      ) {
+        return jsonError(
+          "Pembayaran via WhatsApp sedang tidak tersedia. Pilih metode lain.",
+          400,
+        );
+      }
+    }
+
+    const orderNumber = `CF-${Date.now()}-${randomBytes(4).toString("hex")}`;
+    const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
 
     const supabase = createAdminClient();
 
@@ -330,7 +370,7 @@ export async function POST(request: Request) {
         currency: "IDR",
         order_status: "pending_payment",
         payment_status: "pending",
-        payment_gateway: "midtrans",
+        payment_gateway: paymentMethod,
         ...(appliedDiscount
           ? {
               discount_code: appliedDiscount.code,
@@ -380,13 +420,92 @@ export async function POST(request: Request) {
       return jsonError("Detail produk pesanan gagal disimpan.", 500);
     }
 
+    if (paymentMethod === "whatsapp") {
+      const whatsappMessage = renderWhatsAppTemplate(
+        paymentSettings.whatsappTemplate,
+        {
+          order_number: order.order_number,
+          customer_name: name,
+          customer_phone: phone,
+          customer_email: email,
+          items: formatWhatsAppItems(normalizedItems),
+          subtotal: formatRupiah(subtotal),
+          shipping: formatRupiah(shippingCost),
+          discount:
+            discountAmount > 0
+              ? `-${formatRupiah(discountAmount)}`
+              : formatRupiah(0),
+          total: formatRupiah(totalAmount),
+          shipping_address: `${address}, ${city}, ${province} ${postalCode}`,
+          notes: notes || "-",
+        },
+      );
+
+      const whatsappUrl = buildWhatsAppUrl(
+        paymentSettings.whatsappNumber,
+        whatsappMessage,
+      );
+
+      if (!whatsappUrl) {
+        await supabase
+          .from("orders")
+          .update({
+            order_status: "cancelled",
+            payment_status: "failure",
+          })
+          .eq("id", order.id);
+
+        if (appliedDiscount) {
+          await releaseDiscountUsage(appliedDiscount);
+        }
+
+        return jsonError(
+          "Nomor WhatsApp admin belum valid. Hubungi admin untuk menyelesaikan pesanan.",
+          500,
+        );
+      }
+
+      return NextResponse.json(
+        {
+          orderNumber: order.order_number,
+          paymentMethod,
+          redirectUrl: whatsappUrl,
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+            "X-Content-Type-Options": "nosniff",
+          },
+        },
+      );
+    }
+
+    const serverKey = process.env.MIDTRANS_SERVER_KEY;
+
+    if (!serverKey) {
+      console.error("MIDTRANS_SERVER_KEY is not configured.");
+
+      await supabase
+        .from("orders")
+        .update({
+          order_status: "cancelled",
+          payment_status: "failure",
+        })
+        .eq("id", order.id);
+
+      if (appliedDiscount) {
+        await releaseDiscountUsage(appliedDiscount);
+      }
+
+      return jsonError("Konfigurasi pembayaran di server belum lengkap.", 500);
+    }
+
     const itemDetails = normalizedItems.map((item) => ({
       id: `${item.product_id}-${item.size.replace(/[^a-zA-Z0-9-]/g, "")}`,
       price: item.unit_price,
       quantity: item.quantity,
       name: item.product_name.slice(0, 50),
     }));
-
     if (shippingCost > 0) {
       itemDetails.push({
         id: "shipping",
@@ -528,6 +647,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         orderNumber: order.order_number,
+        paymentMethod,
         redirectUrl: paymentData.redirect_url,
       },
       {

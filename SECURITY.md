@@ -12,7 +12,7 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 ## Cakupan
 
 - Aplikasi storefront dan panel admin
-- API checkout, pelacakan pesanan, notifikasi Midtrans, serta API admin produk/diskon
+- API checkout, pelacakan pesanan, notifikasi Midtrans, metode pembayaran publik, serta API admin produk/kategori/diskon/pembayaran
 - Konfigurasi header, CSP, dan autentikasi
 
 ## Kontrol Keamanan
@@ -36,7 +36,9 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 - Route browser memeriksa `Origin`/`Sec-Fetch-Site`.
 - Rate limit untuk checkout, tracking, dan endpoint admin.
 - Harga, ongkir, total, dan kode diskon selalu dihitung ulang dari database server.
-- Mutasi produk/kategori/diskon hanya lewat API admin yang memverifikasi token, allowlist, dan rate limit.
+- Mutasi produk/kategori/diskon/pengaturan pembayaran hanya lewat API admin yang memverifikasi token, allowlist, dan rate limit.
+- Metode pembayaran divalidasi ulang di server; checkout tidak menerima harga, total, atau nomor WhatsApp dari client.
+- Template WhatsApp dirender di server, dan redirect WhatsApp dibatasi ke `https://wa.me` atau `https://api.whatsapp.com`.
 - Upload gambar dibatasi ukuran, MIME type, dan disimpan dengan nama acak di bucket publik.
 - Respons API memakai `Cache-Control: no-store` dan `X-Content-Type-Options: nosniff`.
 
@@ -46,22 +48,27 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 - Status sukses tidak bisa dibatalkan oleh notifikasi pending/failure/authorize yang terlambat.
 - Notifikasi yang datang bersamaan ditangani dengan optimistic concurrency (compare-and-swap), lalu dievaluasi ulang jika kalah balapan.
 - Redirect URL Midtrans divalidasi (HTTPS + domain `*.midtrans.com`).
-- Service role key hanya dipakai di server (`server-only`).
+- Pembayaran WhatsApp manual membuat pesanan `pending`, mengirim ringkasan pesanan ke admin, dan tidak meminta kredensial pembayaran melalui chat.
+- Admin dapat memperbarui status pembayaran/pesanan secara manual; status lunas mengisi `paid_at`.
+- Service role key hanya dipakai di server (`server-only`); kredensial Midtrans tidak disimpan di tabel pengaturan.
 
 ### Data
-- RLS aktif pada tabel pesanan, produk, kategori, dan diskon. Produk hanya punya policy baca untuk produk aktif; kategori hanya punya policy baca untuk kategori aktif; diskon tidak punya policy publik.
+- RLS aktif pada tabel pesanan, produk, kategori, diskon, dan payment_settings. Produk hanya punya policy baca untuk produk aktif; kategori hanya punya policy baca untuk kategori aktif; diskon dan payment_settings tidak punya policy publik.
 - Data pelacakan mengembalikan field terbatas dan membutuhkan nomor pesanan + email.
 - Tidak ada penyimpanan data kartu di aplikasi.
 
 ## Checklist Sebelum Go-Live
 
+- [ ] Migrasi `001`, `002`, dan `003` sudah dijalankan; tabel `payment_settings` ada dan hanya dapat diakses service role.
 - [ ] `SITE_URL` dan `NEXT_PUBLIC_SITE_URL` memakai domain HTTPS final.
 - [ ] `MIDTRANS_IS_PRODUCTION=true` dan server key produksi terpasang.
 - [ ] `SUPABASE_SECRET_KEY` tidak ada di bundle client (cek Network/JS).
 - [ ] Public signup Supabase dimatikan.
 - [ ] Email admin terverifikasi dan allowlist benar.
-- [ ] RLS aktif; tidak ada policy `anon` pada `orders`, `order_items`, dan `discounts`; `categories` hanya punya policy baca untuk kategori aktif.
+- [ ] RLS aktif; tidak ada policy `anon` pada `orders`, `order_items`, `discounts`, dan `payment_settings`; `categories` hanya punya policy baca untuk kategori aktif.
 - [ ] Notification URL Midtrans sudah diarahkan ke domain produksi.
+- [ ] Metode pembayaran di `/admin/payments` sudah diuji (Midtrans dan/atau WhatsApp), termasuk template dan nomor admin.
+- [ ] Uji alur WhatsApp: pesanan tersimpan, pesan terisi, dan admin dapat menandai lunas.
 - [ ] Ganti email/WhatsApp placeholder di `lib/site.ts`.
 - [ ] Uji rate limit di balik reverse proxy dan pastikan header IP tepercaya.
 - [ ] Ganti rate limiter in-memory dengan Redis/Upstash jika multi-instance.

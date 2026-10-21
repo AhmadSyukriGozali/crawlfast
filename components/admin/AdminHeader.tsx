@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type AdminSection = "orders" | "products" | "categories" | "discounts";
+type AdminSection = "orders" | "products" | "categories" | "discounts" | "payments";
 
 type Props = {
   email: string;
@@ -15,6 +15,7 @@ const NAV_ITEMS: { key: AdminSection; href: string; label: string }[] = [
   { key: "products", href: "/admin/products", label: "Produk" },
   { key: "categories", href: "/admin/categories", label: "Kategori" },
   { key: "discounts", href: "/admin/discounts", label: "Diskon" },
+  { key: "payments", href: "/admin/payments", label: "Pembayaran" },
 ];
 
 export default function AdminHeader({

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -46,6 +47,13 @@ type AppliedDiscount = {
   subtotal: number;
 };
 
+type CheckoutPaymentMethod = "midtrans" | "whatsapp";
+
+type PaymentMethods = {
+  midtransEnabled: boolean;
+  whatsappEnabled: boolean;
+};
+
 const inputClass = "field mt-2";
 const labelClass = "field-label";
 
@@ -64,6 +72,72 @@ export default function CheckoutPage() {
     useState<AppliedDiscount | null>(null);
   const [discountError, setDiscountError] = useState("");
   const [checkingDiscount, setCheckingDiscount] = useState(false);
+
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethods>({
+    midtransEnabled: true,
+    whatsappEnabled: false,
+  });
+  const [paymentMethod, setPaymentMethod] =
+    useState<CheckoutPaymentMethod>("midtrans");
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
+  const [paymentMethodsError, setPaymentMethodsError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPaymentMethods() {
+      try {
+        const response = await fetch("/api/payment-methods", {
+          cache: "no-store",
+        });
+        const result = (await response.json().catch(() => null)) as
+          | (PaymentMethods & { error?: string })
+          | null;
+
+        if (!response.ok || !result) {
+          throw new Error(result?.error || "Metode pembayaran gagal dimuat.");
+        }
+
+        if (cancelled) return;
+
+        const methods = {
+          midtransEnabled: result.midtransEnabled === true,
+          whatsappEnabled: result.whatsappEnabled === true,
+        };
+
+        setPaymentMethods(methods);
+
+        if (!methods.midtransEnabled && methods.whatsappEnabled) {
+          setPaymentMethod("whatsapp");
+        }
+
+        if (!methods.midtransEnabled && !methods.whatsappEnabled) {
+          setPaymentMethodsError(
+            "Belum ada metode pembayaran yang aktif. Hubungi admin CRAWLFAST.",
+          );
+        }
+      } catch (loadError) {
+        if (cancelled) return;
+
+        setPaymentMethodsError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Metode pembayaran gagal dimuat.",
+        );
+      } finally {
+        if (!cancelled) setPaymentMethodsLoading(false);
+      }
+    }
+
+    void loadPaymentMethods();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasPaymentMethod =
+    paymentMethods.midtransEnabled || paymentMethods.whatsappEnabled;
 
   const shipping = useMemo(() => calculateShipping(subtotal), [subtotal]);
   const activeDiscount =
@@ -138,6 +212,11 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!hasPaymentMethod) {
+      setError("Belum ada metode pembayaran yang aktif. Hubungi admin.");
+      return;
+    }
+
     submittingRef.current = true;
     setIsSubmitting(true);
 
@@ -163,6 +242,7 @@ export default function CheckoutPage() {
             quantity: item.quantity,
           })),
           discountCode: activeDiscount?.code ?? "",
+          paymentMethod,
         }),
       });
 
@@ -170,6 +250,7 @@ export default function CheckoutPage() {
         error?: string;
         redirectUrl?: string;
         orderNumber?: string;
+        paymentMethod?: CheckoutPaymentMethod;
       } | null;
 
       if (!response.ok || !result) {
@@ -188,12 +269,23 @@ export default function CheckoutPage() {
 
       const redirect = new URL(result.redirectUrl);
 
-      if (
-        redirect.protocol !== "https:" ||
-        (redirect.hostname !== "midtrans.com" &&
-          !redirect.hostname.endsWith(".midtrans.com"))
+      if (result.paymentMethod === "whatsapp") {
+        if (
+          redirect.protocol !== "https:" ||
+          (redirect.hostname !== "wa.me" &&
+            redirect.hostname !== "api.whatsapp.com")
+        ) {
+          throw new Error("Tautan WhatsApp tidak valid.");
+        }
+      } else if (
+        result.paymentMethod === "midtrans" &&
+        (redirect.protocol !== "https:" ||
+          (redirect.hostname !== "midtrans.com" &&
+            !redirect.hostname.endsWith(".midtrans.com")))
       ) {
         throw new Error("Tautan pembayaran tidak valid.");
+      } else if (result.paymentMethod !== "midtrans") {
+        throw new Error("Metode pembayaran tidak dikenali.");
       }
 
       window.location.assign(redirect.toString());
@@ -243,8 +335,9 @@ export default function CheckoutPage() {
           </ol>
         </div>
         <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
-          Lengkapi informasi pengiriman. Setelah pesanan diproses, kamu akan
-          diarahkan ke halaman pembayaran Midtrans.
+          Lengkapi informasi pengiriman, lalu pilih metode pembayaran. Kamu
+          akan diarahkan ke Midtrans atau WhatsApp admin untuk menyelesaikan
+          pesanan.
         </p>
       </header>
 
@@ -425,6 +518,98 @@ export default function CheckoutPage() {
               </div>
             </section>
 
+            <section>
+              <div className="mb-5 border-b border-line pb-3">
+                <h2 className="text-lg font-medium">Metode pembayaran</h2>
+                <p className="mt-1 text-xs text-ink-soft">
+                  Pilih cara pembayaran yang paling nyaman. Total akhir tetap
+                  dihitung ulang di server.
+                </p>
+              </div>
+
+              {paymentMethodsLoading ? (
+                <div className="flex items-center gap-2 border border-line px-4 py-5 text-sm text-ink-soft">
+                  <LoaderCircle size={16} className="animate-spin" />
+                  Memuat metode pembayaran...
+                </div>
+              ) : paymentMethodsError ? (
+                <div className="border border-red-900/20 bg-red-50 p-4 text-sm leading-6 text-red-800">
+                  <p>{paymentMethodsError}</p>
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="mt-3 text-xs font-semibold uppercase tracking-[0.08em] underline underline-offset-4"
+                  >
+                    Muat ulang halaman
+                  </button>
+                </div>
+              ) : !hasPaymentMethod ? (
+                <div className="border border-line px-4 py-5 text-sm leading-6 text-ink-soft">
+                  Belum ada metode pembayaran yang aktif. Hubungi admin
+                  CRAWLFAST melalui halaman kontak.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {paymentMethods.midtransEnabled && (
+                    <label
+                      className={`flex cursor-pointer items-start gap-3 border p-4 transition ${
+                        paymentMethod === "midtrans"
+                          ? "border-sage bg-sage/5"
+                          : "border-line hover:border-ink-muted/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="midtrans"
+                        checked={paymentMethod === "midtrans"}
+                        onChange={() => setPaymentMethod("midtrans")}
+                        className="mt-1 h-4 w-4 accent-[#5b6650]"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold">
+                          Midtrans
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-ink-soft">
+                          Kartu, QRIS, virtual account, dan kanal pembayaran
+                          lain. Kamu akan diarahkan ke halaman aman Midtrans.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+
+                  {paymentMethods.whatsappEnabled && (
+                    <label
+                      className={`flex cursor-pointer items-start gap-3 border p-4 transition ${
+                        paymentMethod === "whatsapp"
+                          ? "border-sage bg-sage/5"
+                          : "border-line hover:border-ink-muted/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="whatsapp"
+                        checked={paymentMethod === "whatsapp"}
+                        onChange={() => setPaymentMethod("whatsapp")}
+                        className="mt-1 h-4 w-4 accent-[#5b6650]"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold">
+                          WhatsApp admin
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-ink-soft">
+                          Pesanan disimpan, lalu kamu diarahkan ke WhatsApp
+                          admin dengan detail pesanan yang sudah terisi.
+                          Pembayaran dikonfirmasi manual oleh admin.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
+            </section>
+
             {/* Honeypot: hanya terisi oleh bot. */}
             <div aria-hidden="true" className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden">
               <label>
@@ -480,9 +665,9 @@ export default function CheckoutPage() {
             <div className="flex items-start gap-3 border border-line p-4">
               <Lock size={18} className="mt-0.5 shrink-0 text-sage" />
               <p className="text-xs leading-5 text-ink-soft">
-                Data dikirim melalui koneksi terenkripsi dan pembayaran diproses
-                oleh Midtrans. CRAWLFAST tidak menyimpan nomor kartu atau
-                kredensial pembayaran kamu.
+                {paymentMethod === "whatsapp"
+                  ? "Pesanan dan ringkasan pembayaran diteruskan ke WhatsApp admin. Konfirmasi pembayaran dilakukan manual. Jangan kirim data kartu atau kredensial pembayaran melalui chat."
+                  : "Data dikirim melalui koneksi terenkripsi dan pembayaran diproses oleh Midtrans. CRAWLFAST tidak menyimpan nomor kartu atau kredensial pembayaran kamu."}
               </p>
             </div>
           </div>
@@ -619,14 +804,23 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting || items.length === 0}
+              disabled={
+                isSubmitting ||
+                items.length === 0 ||
+                paymentMethodsLoading ||
+                !hasPaymentMethod
+              }
               className="btn btn-primary w-full"
             >
               {isSubmitting ? (
                 <>
                   <LoaderCircle size={16} className="animate-spin" />
-                  Memproses pesanan...
+                  {paymentMethod === "whatsapp"
+                    ? "Menyiapkan WhatsApp..."
+                    : "Memproses pesanan..."}
                 </>
+              ) : paymentMethod === "whatsapp" ? (
+                "Lanjutkan via WhatsApp"
               ) : (
                 "Lanjutkan ke pembayaran"
               )}
