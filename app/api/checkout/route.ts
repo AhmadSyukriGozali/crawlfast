@@ -108,7 +108,7 @@ export async function POST(request: Request) {
   }
 
   const ip = getClientIp(request);
-  const limit = rateLimit(`checkout:${ip}`, 8, 60_000);
+  const limit = await rateLimit(`checkout:${ip}`, 8, 60_000);
 
   if (!limit.allowed) {
     return NextResponse.json(

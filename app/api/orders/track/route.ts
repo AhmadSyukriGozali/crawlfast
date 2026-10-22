@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const ip = getClientIp(request);
-  const limit = rateLimit(`track:${ip}`, 10, 5 * 60_000);
+  const limit = await rateLimit(`track:${ip}`, 10, 5 * 60_000);
 
   if (!limit.allowed) {
     return NextResponse.json(

@@ -70,7 +70,11 @@ function orderDetailSelect(includeDiscount: boolean): string {
 export async function GET(request: Request, context: RouteContext) {
   // Batasi percobaan sebelum verifikasi token agar token palsu tidak
   // memicu request tak terbatas ke Supabase Auth.
-  const ipLimit = rateLimit(`admin:auth:${getClientIp(request)}`, 120, 60_000);
+  const ipLimit = await rateLimit(
+    `admin:auth:${getClientIp(request)}`,
+    120,
+    60_000,
+  );
 
   if (!ipLimit.allowed) {
     return noStoreJson(
@@ -88,7 +92,7 @@ export async function GET(request: Request, context: RouteContext) {
     return noStoreJson({ error: auth.error }, { status: auth.status });
   }
 
-  const limit = rateLimit(`admin:order:${auth.user.id}`, 120, 60_000);
+  const limit = await rateLimit(`admin:order:${auth.user.id}`, 120, 60_000);
 
   if (!limit.allowed) {
     return noStoreJson(

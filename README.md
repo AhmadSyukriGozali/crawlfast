@@ -36,6 +36,8 @@ npm run dev
 
 Buka [http://localhost:3000](http://localhost:3000).
 
+Untuk deploy ke Vercel (produksi), ikuti panduan lengkap di [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+
 ## Environment Variables
 
 Lihat `.env.example`. Ringkasan:
@@ -51,6 +53,8 @@ Lihat `.env.example`. Ringkasan:
 | `MIDTRANS_IS_PRODUCTION` | server | `true` untuk produksi, selain itu sandbox |
 | `SITE_URL` | server | URL publik untuk callback pembayaran |
 | `NEXT_PUBLIC_SITE_URL` | client | URL publik untuk metadata/SEO |
+| `UPSTASH_REDIS_REST_URL` | server | Opsional. Redis untuk rate limit terdistribusi (wajib di Vercel) |
+| `UPSTASH_REDIS_REST_TOKEN` | server | Token Redis pasangan dari URL di atas |
 
 > Jangan pernah commit `.env.local`. Hanya `.env.example` yang boleh masuk repository.
 
@@ -61,6 +65,7 @@ Lihat `.env.example`. Ringkasan:
 3. Buat user admin di Authentication → Users, lalu isi emailnya di `ADMIN_EMAIL`.
 4. Pastikan email admin sudah terverifikasi (`email_confirmed_at` terisi).
 5. Jalankan migrasi [`supabase/migrations/001_products_and_discounts.sql`](./supabase/migrations/001_products_and_discounts.sql), lalu [`supabase/migrations/002_categories.sql`](./supabase/migrations/002_categories.sql), lalu [`supabase/migrations/003_payment_settings.sql`](./supabase/migrations/003_payment_settings.sql) di **Supabase Dashboard → SQL Editor**. Migrasi pertama membuat tabel `products`, `discounts`, kolom diskon di `orders`, seed 12 produk awal, dan bucket storage `product-images`. Migrasi kedua membuat tabel `categories`, menghubungkan `products.category` ke kategori, dan menambahkan dukungan ukuran `XXL`. Migrasi ketiga membuat tabel `payment_settings` untuk metode pembayaran dan template WhatsApp.
+   > **Project Supabase baru:** buat tabel `orders` dan `order_items` dari bagian [Tabel yang dibutuhkan](#tabel-yang-dibutuhkan) terlebih dahulu. Migrasi `001` hanya menambahkan kolom diskon ke `orders` dan akan gagal jika tabel tersebut belum ada.
 6. Pastikan bucket `product-images` bersifat public (migrasi mengaturnya otomatis) agar gambar hasil upload bisa tampil.
 
 ### Tabel yang dibutuhkan
@@ -152,7 +157,7 @@ Lapisan keamanan yang sudah diterapkan:
 - **Security headers**: CSP, HSTS (production), `X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP, dan `poweredByHeader: false` (lihat `next.config.ts`).
 - **Admin**: token diverifikasi ke Supabase di server, allowlist email, cek email terverifikasi, rate limit, respons `no-store`.
 - **Checkout**: origin check (CSRF), rate limit per IP, batas ukuran body, validasi field, whitelist produk/ukuran dari database, harga & ongkir dihitung ulang di server, validasi kode diskon dan kuota secara atomik, honeypot, validasi metode pembayaran, dan validasi redirect Midtrans/WhatsApp.
-- **Admin produk, kategori, diskon & pembayaran**: semua mutasi lewat route handler dengan verifikasi token admin, validasi input server-side, rate limit, dan invalidasi cache produk/kategori. Upload gambar dibatasi 5 MB serta tipe JPEG/PNG/WEBP/AVIF.
+- **Admin produk, kategori, diskon & pembayaran**: semua mutasi lewat route handler dengan verifikasi token admin, validasi input server-side, rate limit, dan invalidasi cache produk/kategori. Upload gambar dibatasi 4 MB serta tipe JPEG/PNG/WEBP/AVIF.
 - **Pembayaran**: signature SHA-512 dengan `timingSafeEqual`, verifikasi nominal, proteksi notifikasi duplikat/terlambat/bersamaan dengan optimistic concurrency, dan pencatatan payload. Pembayaran WhatsApp manual tidak memproses kredensial pembayaran; admin mengubah status setelah verifikasi.
 - **Pelacakan pesanan**: butuh nomor pesanan + email yang cocok, rate limit, dan hanya mengembalikan data terbatas (tanpa alamat/telepon).
 - **404 produk**: slug/ID divalidasi di `proxy.ts`, sehingga URL produk yang tidak ada langsung mengembalikan status 404 (bukan soft 404).
@@ -172,12 +177,12 @@ npm run lint   # ESLint
 
 ## Aset Gambar
 
-Foto produk awal dan editorial disimpan lokal di [`public/products`](./public/products) dan [`public/editorial`](./public/editorial). Admin juga bisa meng-upload gambar produk baru ke Supabase Storage bucket `product-images` (maksimal 5 MB; JPEG/PNG/WEBP/AVIF). Semua foto awal berasal dari [Unsplash](https://unsplash.com) dan digunakan sesuai [Unsplash License](https://unsplash.com/license). Ganti dengan foto milik sendiri sebelum produksi jika diperlukan.
+Foto produk awal dan editorial disimpan lokal di [`public/products`](./public/products) dan [`public/editorial`](./public/editorial). Admin juga bisa meng-upload gambar produk baru ke Supabase Storage bucket `product-images` (maksimal 4 MB; JPEG/PNG/WEBP/AVIF). Semua foto awal berasal dari [Unsplash](https://unsplash.com) dan digunakan sesuai [Unsplash License](https://unsplash.com/license). Ganti dengan foto milik sendiri sebelum produksi jika diperlukan.
 
 ## Catatan & Batasan
 
 - Keranjang dan wishlist disimpan di browser (belum tersinkron ke akun).
-- Rate limit menggunakan memori proses. Untuk deployment multi-instance/serverless, gunakan Redis/Upstash.
+- Rate limit memakai Upstash Redis (sliding window) jika `UPSTASH_REDIS_REST_URL` dan `UPSTASH_REDIS_REST_TOKEN` diisi, dengan fallback in-memory untuk pengembangan lokal. Untuk deployment multi-instance/serverless seperti Vercel, Redis wajib diaktifkan.
 - Login pelanggan, riwayat pesanan otomatis, dan email transaksional belum diimplementasikan.
 - Produk disimpan di Supabase. Katalog statis di `lib/catalog.ts` hanya dipakai sebagai fallback sementara jika tabel `products` belum dibuat.
 - Kategori disimpan di tabel `categories`. Daftar statis di `lib/catalog.ts` hanya dipakai sebagai fallback jika tabel `categories` belum dibuat.

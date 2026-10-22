@@ -9,6 +9,7 @@ import { useAdminSession } from "@/features/admin/useAdminSession";
 import type { AdminCategory } from "@/features/categories/types";
 import { ALL_SIZES, PRODUCT_TAGS } from "@/lib/catalog";
 import { slugifyProductName } from "@/lib/products/validation";
+import { PRODUCT_IMAGE_MAX_BYTES } from "@/lib/products/constants";
 import { adminFetch, signOutAdmin } from "@/lib/admin/client";
 import type { AdminProduct } from "@/features/products/types";
 
@@ -245,6 +246,14 @@ export default function ProductForm({ productId }: Props) {
 
   async function handleFileChange(file: File | undefined) {
     if (!file) return;
+
+    if (file.size > PRODUCT_IMAGE_MAX_BYTES) {
+      setUploadError("Ukuran gambar maksimal 4 MB.");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
 
     setUploading(true);
     setUploadError("");
@@ -744,7 +753,7 @@ export default function ProductForm({ productId }: Props) {
                     className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700"
                   />
                   <p className="mt-2 text-[11px] leading-4 text-slate-500">
-                    Maksimal 5 MB. JPG, PNG, WEBP, atau AVIF. Upload akan
+                    Maksimal 4 MB. JPG, PNG, WEBP, atau AVIF. Upload akan
                     otomatis mengisi URL gambar.
                   </p>
                   {uploading && (

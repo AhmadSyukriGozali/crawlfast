@@ -3,7 +3,7 @@ import { getPaymentSettings } from "@/lib/payments/data";
 import { getClientIp, rateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(request: Request) {
-  const limit = rateLimit(
+  const limit = await rateLimit(
     `payment-methods:${getClientIp(request)}`,
     120,
     60_000,

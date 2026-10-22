@@ -26,10 +26,10 @@ export async function POST(request: Request) {
 
   if (
     Number.isFinite(contentLength) &&
-    contentLength > PRODUCT_IMAGE_MAX_BYTES + 512 * 1024
+    contentLength > PRODUCT_IMAGE_MAX_BYTES + 128 * 1024
   ) {
     return noStoreJson(
-      { error: "Ukuran gambar maksimal 5 MB." },
+      { error: "Ukuran gambar maksimal 4 MB." },
       { status: 413 },
     );
   }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
   if (file.size <= 0 || file.size > PRODUCT_IMAGE_MAX_BYTES) {
     return noStoreJson(
-      { error: "Ukuran gambar harus antara 1 byte dan 5 MB." },
+      { error: "Ukuran gambar harus antara 1 byte dan 4 MB." },
       { status: 413 },
     );
   }

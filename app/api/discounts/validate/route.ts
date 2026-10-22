@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     return jsonError("Permintaan tidak diizinkan.", 403);
   }
 
-  const limit = rateLimit(
+  const limit = await rateLimit(
     `discount:validate:${getClientIp(request)}`,
     15,
     5 * 60_000,

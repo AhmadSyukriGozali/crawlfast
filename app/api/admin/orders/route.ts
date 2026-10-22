@@ -44,7 +44,11 @@ function nextDate(value: string): string {
 export async function GET(request: Request) {
   // Batasi percobaan sebelum verifikasi token agar token palsu tidak
   // memicu request tak terbatas ke Supabase Auth.
-  const ipLimit = rateLimit(`admin:auth:${getClientIp(request)}`, 120, 60_000);
+  const ipLimit = await rateLimit(
+    `admin:auth:${getClientIp(request)}`,
+    120,
+    60_000,
+  );
 
   if (!ipLimit.allowed) {
     return noStoreJson(
@@ -65,7 +69,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const limit = rateLimit(`admin:orders:${auth.user.id}`, 120, 60_000);
+  const limit = await rateLimit(`admin:orders:${auth.user.id}`, 120, 60_000);
 
   if (!limit.allowed) {
     return noStoreJson(

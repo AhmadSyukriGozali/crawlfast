@@ -71,12 +71,12 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 - [ ] Uji alur WhatsApp: pesanan tersimpan, pesan terisi, dan admin dapat menandai lunas.
 - [ ] Ganti email/WhatsApp placeholder di `lib/site.ts`.
 - [ ] Uji rate limit di balik reverse proxy dan pastikan header IP tepercaya.
-- [ ] Ganti rate limiter in-memory dengan Redis/Upstash jika multi-instance.
+- [ ] Rate limiter Redis/Upstash aktif (`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`) dan sudah diuji di deployment multi-instance.
 - [ ] Aktifkan monitoring/log aggregation untuk error server.
 - [ ] Backup database dan uji restore.
 
 ## Batasan yang Diketahui
 
-- Rate limiter in-memory tidak konsisten antar instance.
+- Rate limiter in-memory hanya fallback untuk pengembangan lokal; tanpa Upstash Redis, limit tidak konsisten antar instance serverless.
 - CSP masih mengizinkan `'unsafe-inline'` untuk script karena kebutuhan runtime Next.js; pertimbangkan nonce/strict CSP jika arsitektur memungkinkan.
 - Keranjang/wishlist disimpan di `localStorage` (tidak sensitif, tetapi dapat dimodifikasi pengguna; server tetap memvalidasi semua data checkout).

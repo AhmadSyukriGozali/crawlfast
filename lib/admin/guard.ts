@@ -17,7 +17,7 @@ export async function guardAdminApi(
   scope: string,
   maxRequests = 60,
 ): Promise<GuardResult> {
-  const ipLimit = rateLimit(
+  const ipLimit = await rateLimit(
     `admin:auth:${getClientIp(request)}`,
     120,
     60_000,
@@ -45,7 +45,7 @@ export async function guardAdminApi(
     };
   }
 
-  const limit = rateLimit(
+  const limit = await rateLimit(
     `admin:${scope}:${auth.user.id}`,
     maxRequests,
     60_000,
