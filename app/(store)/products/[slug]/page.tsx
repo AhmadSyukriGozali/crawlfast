@@ -21,10 +21,12 @@ type PageProps = {
 export async function generateStaticParams() {
   const products = await getStoreProducts();
 
-  return products.flatMap((product) => [
+  const params = products.flatMap((product) => [
     { slug: product.slug },
     { slug: String(product.id) },
   ]);
+
+  return params.length > 0 ? params : [{ slug: "__placeholder__" }];
 }
 
 export async function generateMetadata({

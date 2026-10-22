@@ -42,6 +42,7 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
+  overflow-x: clip;
   background: var(--page);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -375,6 +376,421 @@ details > summary::-webkit-details-marker {
 
 details[open] .accordion-icon {
   transform: rotate(45deg);
+}
+
+/* ---------- Homepage experience ---------- */
+
+:root {
+  --intro-lead: 0ms;
+}
+
+/* Intro curtain: only plays on a hard load of the homepage, once per session. */
+.intro {
+  display: none;
+}
+
+html[data-intro="play"] {
+  overflow: hidden;
+  --intro-lead: 1500ms;
+}
+
+html[data-intro="play"] .intro {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  background: var(--color-cream);
+  overflow: hidden;
+  will-change: transform;
+  animation: intro-lift 2.4s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+}
+
+html[data-intro="done"] .intro,
+html[data-intro="off"] .intro {
+  display: none;
+}
+
+.intro__content {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.intro__eyebrow {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  opacity: 0;
+  animation: intro-fade 700ms var(--ease-out-soft) 420ms forwards;
+}
+
+.intro__word {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.15rem;
+  font-size: clamp(2.4rem, 9vw, 5.5rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+.intro__letter {
+  display: inline-block;
+  overflow: hidden;
+}
+
+.intro__letter > span {
+  display: inline-block;
+  transform: translateY(118%) rotate(5deg);
+  animation: intro-letter 950ms var(--ease-out-soft) both;
+}
+
+.intro__bar {
+  width: min(240px, 62vw);
+  height: 1px;
+  margin: 1.6rem auto 0;
+  background: rgb(29 30 26 / 0.14);
+  overflow: hidden;
+}
+
+.intro__bar > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--color-sage);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: intro-bar 1.15s var(--ease-out-soft) 150ms forwards;
+}
+
+.intro__tagline {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--color-ink-soft);
+  opacity: 0;
+  animation: intro-fade 700ms var(--ease-out-soft) 620ms forwards;
+}
+
+@keyframes intro-lift {
+  0%,
+  62% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-101%);
+  }
+}
+
+@keyframes intro-letter {
+  from {
+    transform: translateY(118%) rotate(5deg);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes intro-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes intro-bar {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Hero choreography, delayed until the curtain lifts. */
+.hero-anim {
+  animation: hero-rise 900ms var(--ease-out-soft) both;
+  animation-delay: calc(var(--intro-lead) + var(--d, 0ms));
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
+}
+
+.hero-line > span {
+  display: block;
+  transform: translateY(118%);
+  animation: hero-line-rise 1s var(--ease-out-soft) both;
+  animation-delay: calc(var(--intro-lead) + var(--d, 0ms));
+}
+
+@keyframes hero-line-rise {
+  to {
+    transform: translateY(0);
+  }
+}
+
+.hero-frame {
+  animation: hero-frame-in 1.1s var(--ease-out-soft) both;
+  animation-delay: calc(var(--intro-lead) + 200ms);
+}
+
+@keyframes hero-frame-in {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.hero-frame__img {
+  animation: hero-img-zoom 1.7s var(--ease-out-soft) both;
+  animation-delay: calc(var(--intro-lead) + 240ms);
+}
+
+@keyframes hero-img-zoom {
+  from {
+    transform: scale(1.09);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.hero-card {
+  animation: hero-card-in 900ms var(--ease-out-soft) both;
+  animation-delay: calc(var(--intro-lead) + 620ms);
+}
+
+@keyframes hero-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hero-rule {
+  animation: hero-rule-in 900ms var(--ease-out-soft) both;
+  animation-delay: calc(var(--intro-lead) + 120ms);
+  transform-origin: left center;
+}
+
+@keyframes hero-rule-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.scroll-cue__line {
+  animation: cue-line 2.6s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+@keyframes cue-line {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  35% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+
+/* Scroll reveal (progressive enhancement: visible without JS). */
+.has-js .reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 900ms var(--ease-out-soft),
+    transform 900ms var(--ease-out-soft);
+  will-change: opacity, transform;
+}
+
+.has-js .reveal.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Marquee pauses on hover so the label can be read. */
+.marquee:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* Editorial tiles */
+.tile img {
+  transition: transform 1.2s var(--ease-out-soft);
+}
+
+.tile:hover img {
+  transform: scale(1.045);
+}
+
+/* Values */
+.value-card {
+  transition:
+    border-color 350ms ease,
+    background-color 350ms ease,
+    transform 500ms var(--ease-out-soft);
+}
+
+.value-card:hover {
+  transform: translateY(-3px);
+}
+
+.value-card:hover .value-icon {
+  transform: translateY(-2px) rotate(-8deg);
+}
+
+.value-icon {
+  transition: transform 500ms var(--ease-out-soft);
+}
+
+/* Philosophy aurora */
+.aurora {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      40% 45% at 30% 35%,
+      rgb(170 177 154 / 0.35) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      35% 40% at 72% 60%,
+      rgb(169 95 61 / 0.16) 0%,
+      transparent 70%
+    );
+  filter: blur(40px);
+  animation: aurora-drift 20s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift {
+  from {
+    transform: translate3d(-3%, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(5%, -5%, 0) scale(1.12);
+  }
+}
+
+/* Testimonials + CTA */
+.lift {
+  transition:
+    transform 500ms var(--ease-out-soft),
+    border-color 350ms ease,
+    background-color 350ms ease;
+}
+
+.lift:hover {
+  transform: translateY(-4px);
+  border-color: rgb(29 30 26 / 0.28);
+}
+
+.quote-mark {
+  font-family: var(--font-display);
+}
+
+.cta-panel::after {
+  content: "CRAWLFAST";
+  position: absolute;
+  left: 50%;
+  bottom: -0.42em;
+  transform: translateX(-50%);
+  font-size: clamp(4rem, 14vw, 11rem);
+  font-weight: 600;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(29 30 26 / 0.07);
+  pointer-events: none;
+  user-select: none;
+}
+
+.cta-panel {
+  isolation: isolate;
+}
+
+.cta-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hover underline used by quiet links. */
+.link-underline {
+  position: relative;
+}
+
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -0.35rem;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 400ms var(--ease-out-soft);
+}
+
+.link-underline:hover::after,
+.link-underline:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-intro="play"] {
+    overflow: auto;
+  }
+
+  html[data-intro="play"] .intro {
+    display: none;
+  }
+
+  .has-js .reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .aurora,
+  .scroll-cue__line {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

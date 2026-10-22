@@ -78,7 +78,7 @@ export default function SiteFooter({
                 className="flex items-center gap-2.5 transition-colors hover:text-white"
               >
                 <Camera size={15} />
-                @crawlfast
+                @crawlfast.std
                 <ArrowUpRight size={12} />
               </a>
             </div>

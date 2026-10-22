@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
+import Reveal from "@/components/home/Reveal";
 import {
   getFeaturedProducts,
   getNewArrivals,
@@ -34,9 +35,9 @@ export default function FeaturedCollection({
   return (
     <section
       id="collection"
-      className="container-page pb-16 pt-14 sm:pb-20 sm:pt-20"
+      className="container-page pb-16 pt-14 sm:pb-24 sm:pt-20"
     >
-      <div className="mb-8 flex flex-col gap-6 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+      <Reveal className="mb-8 flex flex-col gap-6 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="eyebrow">Curated for you</p>
           <h2 className="display mt-3 text-4xl sm:text-5xl lg:text-[56px]">
@@ -48,45 +49,49 @@ export default function FeaturedCollection({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          role="group"
+          aria-label="Filter koleksi"
+        >
           {TABS.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setTab(item.id)}
               aria-pressed={tab === item.id}
-              className={`border px-4 py-2.5 text-[10px] font-medium uppercase tracking-[0.08em] transition-colors ${
+              className={`border px-4 py-2.5 text-[10px] font-medium uppercase tracking-[0.08em] transition-all duration-300 ${
                 tab === item.id
-                  ? "border-ink bg-ink text-white"
-                  : "border-line text-ink-soft hover:border-ink hover:text-ink"
+                  ? "border-ink bg-ink text-white shadow-[0_10px_30px_-18px_rgba(29,30,26,0.9)]"
+                  : "border-line text-ink-soft hover:-translate-y-0.5 hover:border-ink hover:text-ink"
               }`}
             >
               {item.label}
             </button>
           ))}
         </div>
-      </div>
+      </Reveal>
 
-      <div className="grid grid-cols-2 gap-x-3 gap-y-9 sm:gap-x-5 lg:grid-cols-4 lg:gap-x-6">
+      <div
+        key={tab}
+        className="grid grid-cols-2 gap-x-3 gap-y-9 sm:gap-x-5 lg:grid-cols-4 lg:gap-x-6"
+      >
         {visibleProducts.map((product, index) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            priority={index < 4}
-            className="animate-fade-up"
-          />
+          <Reveal key={product.id} delay={index * 70}>
+            <ProductCard product={product} priority={index < 4} />
+          </Reveal>
         ))}
       </div>
 
-      <div className="mt-10 flex justify-center sm:mt-12">
+      <Reveal className="mt-10 flex justify-center sm:mt-14">
         <Link href="/products" className="btn btn-secondary group">
           Lihat semua produk
           <ArrowRight
             size={15}
-            className="transition-transform group-hover:translate-x-1"
+            className="transition-transform duration-300 group-hover:translate-x-1"
           />
         </Link>
-      </div>
+      </Reveal>
     </section>
   );
 }
