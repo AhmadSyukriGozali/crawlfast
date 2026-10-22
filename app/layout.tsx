@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -126,6 +127,7 @@ export default function RootLayout({
           Lewati ke konten utama
         </a>
         {children}
+        <SpeedInsights />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
