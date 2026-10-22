@@ -215,6 +215,7 @@ export async function POST(request: Request) {
       size: string;
       unit_price: number;
       quantity: number;
+      line_total: number;
     }[] = [];
 
     for (const item of parsedItems) {
@@ -240,6 +241,7 @@ export async function POST(request: Request) {
         size: item.size,
         unit_price: product.price,
         quantity: item.quantity,
+        line_total: product.price * item.quantity,
       });
     }
 
