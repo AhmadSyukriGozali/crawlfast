@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Save, Upload } from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { useAdminSession } from "@/features/admin/useAdminSession";
 import type { AdminCategory } from "@/features/categories/types";
@@ -101,6 +102,7 @@ export default function ProductForm({ productId }: Props) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -396,7 +398,7 @@ export default function ProductForm({ productId }: Props) {
   const previewImage = isPreviewableImage(form.image) ? form.image : "";
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="admin-shell admin-main">
       <AdminHeader
         email={session.email}
         loading={loading}
@@ -411,49 +413,69 @@ export default function ProductForm({ productId }: Props) {
         onLogout={() => void session.logout()}
       />
 
-      <div className="mx-auto max-w-[1200px] px-4 py-7 sm:px-6 sm:py-9">
+      <div className="admin-container max-w-[1280px]">
         <Link
           href="/admin/products"
-          className="text-sm font-semibold text-slate-500 transition hover:text-slate-900"
+          className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6f7064] transition hover:text-[#171814]"
         >
-          ← Kembali ke produk
+          <ArrowLeft size={12} strokeWidth={2} aria-hidden="true" />
+          Kembali ke produk
         </Link>
 
-        <header className="mt-5">
-          <p className="text-sm font-semibold text-emerald-700">CATALOG</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight">
-            {productId ? "Ubah produk" : "Tambah produk"}
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Perubahan akan langsung terlihat di storefront setelah disimpan.
-          </p>
+        <header className="admin-rise mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="admin-eyebrow">Catalog</p>
+            <h1 className="admin-title">
+              {productId ? "Ubah produk" : "Tambah produk"}
+              <span className="serif-accent text-[#8a6a3a]">.</span>
+            </h1>
+            <p className="admin-subtitle">
+              Perubahan akan langsung terlihat di storefront setelah disimpan.
+            </p>
+          </div>
+
+          <span className="inline-flex items-center gap-2 self-start rounded-full border border-[#e4dfd2] bg-[#fffdf8]/80 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6f7064] sm:self-auto">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#b08d57]" />
+            {productId ? "Edit mode" : "New entry"}
+          </span>
         </header>
 
         {(displayError || formError) && (
           <div
             role="alert"
-            className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            className="mt-5 flex items-start gap-2.5 rounded-xl border border-[#a95f3d]/25 bg-[#fdf4ee] p-4 text-sm text-[#8f4a2c]"
           >
             {formError || displayError}
           </div>
         )}
 
         {loading ? (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
-            Memuat data produk...
+          <div
+            className="admin-card mt-6 space-y-4 p-6"
+            aria-busy="true"
+          >
+            <div className="h-4 w-40 animate-pulse rounded bg-[#f0ece2]" />
+            <div className="h-24 animate-pulse rounded-xl bg-[#f6f2e9]" />
+            <div className="h-24 animate-pulse rounded-xl bg-[#f6f2e9]" />
           </div>
         ) : (
           <form
             onSubmit={handleSubmit}
             className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]"
           >
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <h2 className="text-lg font-bold">Informasi produk</h2>
+            <div className="space-y-5">
+              <section className="admin-card p-5 sm:p-6">
+                <div className="flex items-center gap-2.5">
+                  <span className="admin-step" data-step="01">
+                    Identity
+                  </span>
+                  <span className="h-px flex-1 bg-[#eee9de]" />
+                </div>
+                <h2 className="admin-section-title mt-3">Informasi produk</h2>
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <label className="block sm:col-span-2">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Nama produk
                     </span>
                     <input
@@ -461,12 +483,12 @@ export default function ProductForm({ productId }: Props) {
                       value={form.name}
                       onChange={(event) => handleNameChange(event.target.value)}
                       maxLength={120}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                      className="admin-input mt-2"
                     />
                   </label>
 
                   <label className="block sm:col-span-2">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Slug
                     </span>
                     <input
@@ -482,15 +504,15 @@ export default function ProductForm({ productId }: Props) {
                         );
                       }}
                       maxLength={120}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 font-mono text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                      className="admin-input mt-2 font-mono text-sm"
                     />
-                    <span className="mt-1.5 block text-xs text-slate-500">
+                    <span className="mt-1.5 block text-xs text-[#6f7064]">
                       URL: /products/{form.slug || "nama-produk"}
                     </span>
                   </label>
 
                   <label className="block">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Kategori
                     </span>
                     <select
@@ -500,7 +522,7 @@ export default function ProductForm({ productId }: Props) {
                         setField("category", event.target.value)
                       }
                       disabled={categoriesLoading || categories.length === 0}
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-500 disabled:bg-slate-50 disabled:text-slate-500"
+                      className="admin-select mt-2"
                     >
                       <option value="">
                         {categoriesLoading
@@ -525,7 +547,7 @@ export default function ProductForm({ productId }: Props) {
                         )}
                     </select>
                     {categoriesError ? (
-                      <span className="mt-1.5 block text-xs text-red-600">
+                      <span className="mt-1.5 block text-xs text-[#a95f3d]">
                         {categoriesError}{" "}
                         <Link
                           href="/admin/categories"
@@ -535,11 +557,11 @@ export default function ProductForm({ productId }: Props) {
                         </Link>
                       </span>
                     ) : (
-                      <span className="mt-1.5 block text-xs text-slate-500">
+                      <span className="mt-1.5 block text-xs text-[#6f7064]">
                         Kategori dikelola di{" "}
                         <Link
                           href="/admin/categories"
-                          className="font-semibold text-emerald-700 underline"
+                          className="admin-link"
                         >
                           menu Kategori
                         </Link>
@@ -549,13 +571,13 @@ export default function ProductForm({ productId }: Props) {
                   </label>
 
                   <label className="block">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Label
                     </span>
                     <select
                       value={form.tag}
                       onChange={(event) => setField("tag", event.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-500"
+                      className="admin-select mt-2"
                     >
                       <option value="">Tanpa label</option>
                       {PRODUCT_TAGS.map((tag) => (
@@ -567,7 +589,7 @@ export default function ProductForm({ productId }: Props) {
                   </label>
 
                   <label className="block">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Harga jual (Rp)
                     </span>
                     <input
@@ -578,12 +600,12 @@ export default function ProductForm({ productId }: Props) {
                       step={1000}
                       value={form.price}
                       onChange={(event) => setField("price", event.target.value)}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                      className="admin-input mt-2"
                     />
                   </label>
 
                   <label className="block">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Harga coret (opsional)
                     </span>
                     <input
@@ -595,15 +617,15 @@ export default function ProductForm({ productId }: Props) {
                       onChange={(event) =>
                         setField("compareAtPrice", event.target.value)
                       }
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                      className="admin-input mt-2"
                     />
-                    <span className="mt-1.5 block text-xs text-slate-500">
+                    <span className="mt-1.5 block text-xs text-[#6f7064]">
                       Harus lebih besar dari harga jual.
                     </span>
                   </label>
 
                   <label className="block sm:col-span-2">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Deskripsi
                     </span>
                     <textarea
@@ -614,12 +636,12 @@ export default function ProductForm({ productId }: Props) {
                       }
                       rows={5}
                       maxLength={2000}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                      className="admin-textarea mt-2"
                     />
                   </label>
 
                   <label className="block sm:col-span-2">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Detail bahan / perawatan
                     </span>
                     <textarea
@@ -629,14 +651,20 @@ export default function ProductForm({ productId }: Props) {
                       }
                       rows={5}
                       placeholder={"Satu detail per baris\nContoh: 100% cotton combed 24s"}
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                      className="admin-textarea mt-2"
                     />
                   </label>
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <h2 className="text-lg font-bold">Ukuran tersedia</h2>
+              <section className="admin-card p-5 sm:p-6">
+                <div className="flex items-center gap-2.5">
+                  <span className="admin-step" data-step="02">
+                    Fit
+                  </span>
+                  <span className="h-px flex-1 bg-[#eee9de]" />
+                </div>
+                <h2 className="admin-section-title mt-3">Ukuran tersedia</h2>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {ALL_SIZES.map((size) => {
                     const checked = form.sizes.includes(size);
@@ -644,10 +672,10 @@ export default function ProductForm({ productId }: Props) {
                     return (
                       <label
                         key={size}
-                        className={`cursor-pointer rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                        className={`cursor-pointer rounded-lg border px-4 py-2 text-[11px] font-semibold transition ${
                           checked
-                            ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                            : "border-slate-200 text-slate-600 hover:border-slate-300"
+                            ? "border-[#5b6650]/40 bg-[#e6e9dd] text-[#4b5741] shadow-[inset_0_0_0_1px_rgba(91,102,80,0.12)]"
+                            : "border-[#e4dfd2] bg-[#fffefb] text-[#6b6c61] hover:border-[#d5cebd] hover:bg-[#faf7f0]"
                         }`}
                       >
                         <input
@@ -662,17 +690,23 @@ export default function ProductForm({ productId }: Props) {
                   })}
                 </div>
                 {form.sizes.length === 0 && (
-                  <p className="mt-3 text-xs font-semibold text-red-700">
+                  <p className="mt-3 text-xs font-semibold text-[#a95f3d]">
                     Pilih minimal satu ukuran.
                   </p>
                 )}
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <h2 className="text-lg font-bold">Rating & ulasan</h2>
+              <section className="admin-card p-5 sm:p-6">
+                <div className="flex items-center gap-2.5">
+                  <span className="admin-step" data-step="03">
+                    Social proof
+                  </span>
+                  <span className="h-px flex-1 bg-[#eee9de]" />
+                </div>
+                <h2 className="admin-section-title mt-3">Rating &amp; ulasan</h2>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Rating (0–5)
                     </span>
                     <input
@@ -684,11 +718,11 @@ export default function ProductForm({ productId }: Props) {
                       onChange={(event) =>
                         setField("rating", event.target.value)
                       }
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500"
+                      className="admin-input mt-2"
                     />
                   </label>
                   <label className="block">
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                       Jumlah ulasan
                     </span>
                     <input
@@ -700,18 +734,24 @@ export default function ProductForm({ productId }: Props) {
                       onChange={(event) =>
                         setField("reviewCount", event.target.value)
                       }
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500"
+                      className="admin-input mt-2"
                     />
                   </label>
                 </div>
               </section>
             </div>
 
-            <aside className="space-y-6">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-bold">Gambar produk</h2>
+            <aside className="space-y-5">
+              <section className="admin-card p-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="admin-step" data-step="04">
+                    Media
+                  </span>
+                  <span className="h-px flex-1 bg-[#eee9de]" />
+                </div>
+                <h2 className="admin-section-title mt-3">Gambar produk</h2>
 
-                <div className="mt-4 aspect-[4/5] overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-100">
+                <div className="mt-4 aspect-[4/5] overflow-hidden rounded-xl border border-dashed border-[#d5cebd] bg-[#f4efe4]">
                   {previewImage ? (
                     <div className="relative h-full w-full">
                       <Image
@@ -723,14 +763,14 @@ export default function ProductForm({ productId }: Props) {
                       />
                     </div>
                   ) : (
-                    <div className="flex h-full items-center justify-center p-4 text-center text-xs leading-5 text-slate-500">
+                    <div className="flex h-full items-center justify-center p-4 text-center text-xs leading-5 text-[#6f7064]">
                       Preview gambar akan muncul di sini.
                     </div>
                   )}
                 </div>
 
                 <label className="mt-4 block">
-                  <span className="text-sm font-semibold text-slate-700">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                     URL gambar
                   </span>
                   <input
@@ -738,38 +778,57 @@ export default function ProductForm({ productId }: Props) {
                     value={form.image}
                     onChange={(event) => setField("image", event.target.value)}
                     placeholder="/products/nama-file.jpg"
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-xs outline-none focus:border-emerald-500"
+                    className="admin-input mt-2 text-xs"
                   />
                 </label>
 
                 <div className="mt-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/avif"
-                    onChange={(event) =>
-                      void handleFileChange(event.target.files?.[0])
-                    }
-                    className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700"
-                  />
-                  <p className="mt-2 text-[11px] leading-4 text-slate-500">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <label className="admin-btn admin-btn-ghost admin-btn-sm cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[#b08d57]">
+                      <Upload
+                        size={13}
+                        strokeWidth={1.9}
+                        aria-hidden="true"
+                      />
+                      {fileName ? "Ganti gambar" : "Pilih gambar"}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/avif"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          setFileName(file?.name ?? "");
+                          void handleFileChange(file);
+                        }}
+                        className="sr-only"
+                      />
+                    </label>
+                    <span
+                      className={`min-w-0 flex-1 truncate text-[10.5px] ${
+                        fileName ? "text-[#3c3d34]" : "text-[#76776b]"
+                      }`}
+                    >
+                      {fileName || "Belum ada file dipilih"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-4 text-[#6f7064]">
                     Maksimal 4 MB. JPG, PNG, WEBP, atau AVIF. Upload akan
                     otomatis mengisi URL gambar.
                   </p>
                   {uploading && (
-                    <p className="mt-2 text-xs font-semibold text-emerald-700">
+                    <p className="mt-2 text-xs font-semibold text-[#4b5741]">
                       Meng-upload gambar...
                     </p>
                   )}
                   {uploadError && (
-                    <p className="mt-2 text-xs font-semibold text-red-700">
+                    <p className="mt-2 text-xs font-semibold text-[#a95f3d]">
                       {uploadError}
                     </p>
                   )}
                 </div>
 
                 <label className="mt-4 block">
-                  <span className="text-sm font-semibold text-slate-700">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                     Alt text gambar
                   </span>
                   <input
@@ -779,12 +838,12 @@ export default function ProductForm({ productId }: Props) {
                       setField("imageAlt", event.target.value)
                     }
                     maxLength={160}
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500"
+                    className="admin-input mt-2"
                   />
                 </label>
 
                 <label className="mt-4 block">
-                  <span className="text-sm font-semibold text-slate-700">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#56584d]">
                     Warna latar
                   </span>
                   <div className="mt-2 flex items-center gap-3">
@@ -792,55 +851,63 @@ export default function ProductForm({ productId }: Props) {
                       type="color"
                       value={form.tint}
                       onChange={(event) => setField("tint", event.target.value)}
-                      className="h-11 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
+                      className="h-11 w-14 cursor-pointer rounded-lg border border-[#e4dfd2] bg-white p-1"
                     />
                     <input
                       value={form.tint}
                       onChange={(event) => setField("tint", event.target.value)}
                       maxLength={7}
-                      className="min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-3 font-mono text-sm outline-none focus:border-emerald-500"
+                      className="admin-input mt-2 min-w-0 flex-1 font-mono text-sm"
                     />
                   </div>
                 </label>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-bold">Publikasi</h2>
+              <section className="admin-card p-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="admin-step" data-step="05">
+                    Publish
+                  </span>
+                  <span className="h-px flex-1 bg-[#eee9de]" />
+                </div>
+                <h2 className="admin-section-title mt-3">Publikasi</h2>
 
-                <label className="mt-4 flex cursor-pointer items-start gap-3">
+                <label className="admin-option mt-4 flex cursor-pointer items-start gap-3">
                   <input
                     type="checkbox"
                     checked={form.isActive}
                     onChange={(event) =>
                       setField("isActive", event.target.checked)
                     }
-                    className="mt-1 h-4 w-4 accent-emerald-700"
+                    className="peer sr-only"
                   />
+                  <span className="admin-switch" aria-hidden="true" />
                   <span>
-                    <span className="block text-sm font-semibold text-slate-800">
+                    <span className="block text-[12px] font-semibold text-[#2f302a]">
                       Tayangkan di storefront
                     </span>
-                    <span className="mt-0.5 block text-xs leading-5 text-slate-500">
+                    <span className="mt-0.5 block text-[10.5px] leading-5 text-[#6f7064]">
                       Jika dimatikan, produk tetap tersimpan tetapi tidak bisa
                       dibeli.
                     </span>
                   </span>
                 </label>
 
-                <label className="mt-4 flex cursor-pointer items-start gap-3">
+                <label className="admin-option mt-3 flex cursor-pointer items-start gap-3">
                   <input
                     type="checkbox"
                     checked={form.featured}
                     onChange={(event) =>
                       setField("featured", event.target.checked)
                     }
-                    className="mt-1 h-4 w-4 accent-emerald-700"
+                    className="peer sr-only"
                   />
+                  <span className="admin-switch" aria-hidden="true" />
                   <span>
-                    <span className="block text-sm font-semibold text-slate-800">
+                    <span className="block text-[12px] font-semibold text-[#2f302a]">
                       Tampilkan sebagai featured
                     </span>
-                    <span className="mt-0.5 block text-xs leading-5 text-slate-500">
+                    <span className="mt-0.5 block text-[10.5px] leading-5 text-[#6f7064]">
                       Produk featured tampil di bagian pilihan editor.
                     </span>
                   </span>
@@ -851,8 +918,9 @@ export default function ProductForm({ productId }: Props) {
                 <button
                   type="submit"
                   disabled={saving || uploading}
-                  className="w-full rounded-xl bg-emerald-700 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="admin-btn admin-btn-primary w-full"
                 >
+                  <Save size={14} strokeWidth={1.9} aria-hidden="true" />
                   {saving
                     ? "Menyimpan..."
                     : productId
@@ -861,7 +929,7 @@ export default function ProductForm({ productId }: Props) {
                 </button>
                 <Link
                   href="/admin/products"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="admin-btn admin-btn-ghost w-full"
                 >
                   Batal
                 </Link>

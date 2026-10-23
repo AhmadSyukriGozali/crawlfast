@@ -7,7 +7,7 @@ export default function Loading() {
       <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div key={index}>
-            <div className="aspect-[4/5] bg-sand" />
+            <div className="aspect-4/5 bg-sand" />
             <div className="mt-4 h-3 w-16 rounded bg-sand" />
             <div className="mt-2 h-4 w-3/4 rounded bg-sand" />
           </div>

@@ -80,7 +80,7 @@ export default function OpengraphImage() {
             color: "#5d5f56",
           }}
         >
-          <span>T-Shirts · Outerwear · Bottoms</span>
+          <span>T-Shirts · Outerwear · Accessories</span>
           <span>crawlfast.store</span>
         </div>
       </div>

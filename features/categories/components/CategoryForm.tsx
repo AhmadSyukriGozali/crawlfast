@@ -182,7 +182,7 @@ export default function CategoryForm({ categoryId }: Props) {
   const displayError = session.error || categoryError;
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="admin-shell admin-main">
       <AdminHeader
         email={session.email}
         loading={loading}
@@ -197,62 +197,81 @@ export default function CategoryForm({ categoryId }: Props) {
         onLogout={() => void session.logout()}
       />
 
-      <div className="mx-auto max-w-[900px] px-4 py-7 sm:px-6 sm:py-9">
+      <div className="admin-container max-w-250">
         <Link
           href="/admin/categories"
-          className="text-sm font-semibold text-slate-500 transition hover:text-slate-900"
+          className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6f7064] transition hover:text-[#171814]"
         >
           ← Kembali ke kategori
         </Link>
 
-        <header className="mt-5">
-          <p className="text-sm font-semibold text-emerald-700">CATALOG</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight">
-            {categoryId ? "Ubah kategori" : "Tambah kategori"}
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Kategori yang aktif akan muncul sebagai filter di halaman produk.
-            Rename kategori otomatis mengikuti produk yang memakainya.
-          </p>
+        <header className="admin-rise mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="admin-eyebrow">Catalog</p>
+            <h1 className="admin-title">
+              {categoryId ? "Ubah kategori" : "Tambah kategori"}
+              <span className="serif-accent text-[#8a6a3a]">.</span>
+            </h1>
+            <p className="admin-subtitle">
+              Kategori yang aktif akan muncul sebagai filter di halaman
+              produk. Rename kategori otomatis mengikuti produk yang
+              memakainya.
+            </p>
+          </div>
+
+          <span className="inline-flex items-center gap-2 self-start rounded-full border border-[#e4dfd2] bg-[#fffdf8]/80 px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#6f7064] sm:self-auto">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#b08d57]" />
+            {categoryId ? "Edit mode" : "New entry"}
+          </span>
         </header>
 
         {(displayError || formError) && (
           <div
             role="alert"
-            className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            className="mt-5 rounded-xl border border-clay/25 bg-[#fdf4ee] p-4 text-sm text-[#8f4a2c]"
           >
             {formError || displayError}
           </div>
         )}
 
         {loading ? (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
-            Memuat data kategori...
+          <div className="admin-card mt-6 space-y-4 p-6" aria-busy="true">
+            <div className="h-4 w-40 animate-pulse rounded bg-[#f0ece2]" />
+            <div className="h-24 animate-pulse rounded-xl bg-[#f6f2e9]" />
           </div>
         ) : (
           <form
             onSubmit={handleSubmit}
-            className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+            className="admin-card mt-6 p-5 sm:p-6"
           >
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="flex items-center gap-2.5">
+              <span className="admin-step" data-step="01">
+                Collection
+              </span>
+              <span className="h-px flex-1 bg-[#eee9de]" />
+            </div>
+            <h2 className="admin-section-title mt-3">
+              Detail kategori
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-[#6f7064]">
+              Nama dan slug akan dipakai sebagai filter storefront.
+            </p>
+
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
               <label className="block sm:col-span-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Nama kategori
-                </span>
+                <span className="admin-label">Nama kategori</span>
                 <input
                   required
                   value={form.name}
                   onChange={(event) => handleNameChange(event.target.value)}
                   maxLength={60}
                   placeholder="Contoh: Hoodie"
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="admin-input"
                 />
               </label>
 
               <label className="block sm:col-span-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Slug
-                </span>
+                <span className="admin-label">Slug</span>
                 <input
                   required
                   value={form.slug}
@@ -266,18 +285,16 @@ export default function CategoryForm({ categoryId }: Props) {
                     );
                   }}
                   maxLength={80}
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 font-mono text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="admin-input font-mono text-sm"
                 />
-                <span className="mt-1.5 block text-xs text-slate-500">
+                <span className="admin-hint">
                   URL filter: /products?category=
                   {encodeURIComponent(form.name || "nama-kategori")}
                 </span>
               </label>
 
               <label className="block sm:col-span-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  Deskripsi
-                </span>
+                <span className="admin-label">Deskripsi</span>
                 <textarea
                   value={form.description}
                   onChange={(event) =>
@@ -286,58 +303,57 @@ export default function CategoryForm({ categoryId }: Props) {
                   maxLength={300}
                   rows={3}
                   placeholder="Opsional, tampil sebagai catatan internal admin."
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="admin-textarea"
                 />
               </label>
 
               <label className="block">
-                <span className="text-sm font-semibold text-slate-700">
-                  Urutan tampil
-                </span>
+                <span className="admin-label">Urutan tampil</span>
                 <input
                   type="number"
                   min={0}
                   max={9999}
                   value={form.sortOrder}
                   onChange={(event) => setField("sortOrder", event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="admin-input"
                 />
-                <span className="mt-1.5 block text-xs text-slate-500">
+                <span className="admin-hint">
                   Angka lebih kecil tampil lebih dulu.
                 </span>
               </label>
 
-              <label className="flex items-center gap-3 self-end rounded-xl border border-slate-200 px-4 py-3">
+              <label className="admin-option flex cursor-pointer items-start gap-3 self-end">
                 <input
                   type="checkbox"
                   checked={form.isActive}
                   onChange={(event) =>
                     setField("isActive", event.target.checked)
                   }
-                  className="h-4 w-4 accent-emerald-700"
+                  className="peer sr-only"
                 />
+                <span className="admin-switch" aria-hidden="true" />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-700">
+                  <span className="block text-[12px] font-semibold text-[#2f302a]">
                     Aktif
                   </span>
-                  <span className="block text-xs text-slate-500">
+                  <span className="block text-[10.5px] leading-5 text-[#6f7064]">
                     Tampilkan sebagai filter storefront.
                   </span>
                 </span>
               </label>
             </div>
 
-            <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+            <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#eee9de] pt-5 sm:flex-row sm:justify-end">
               <Link
                 href="/admin/categories"
-                className="rounded-xl border border-slate-200 px-5 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="admin-btn admin-btn-ghost"
               >
                 Batal
               </Link>
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-50"
+                className="admin-btn admin-btn-primary"
               >
                 {saving ? "Menyimpan..." : "Simpan kategori"}
               </button>

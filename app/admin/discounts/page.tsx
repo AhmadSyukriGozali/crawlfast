@@ -2,6 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import {
+  BadgePercent,
+  CalendarRange,
+  Pencil,
+  Plus,
+  TicketPercent,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { useAdminDiscounts } from "@/features/discounts/hooks/useAdminDiscounts";
 import type { AdminDiscount } from "@/features/discounts/types";
@@ -11,24 +20,26 @@ import {
 } from "@/lib/discounts/calculate";
 import { formatRupiah } from "@/lib/format";
 
+type StatusTone = "success" | "warn" | "danger" | "neutral";
+
 type Status = {
   label: string;
-  className: string;
+  tone: StatusTone;
 };
 
 function getStatus(discount: AdminDiscount): Status {
   const today = todayInJakarta();
 
   if (!discount.isActive) {
-    return { label: "Nonaktif", className: "bg-slate-100 text-slate-500" };
+    return { label: "Nonaktif", tone: "neutral" };
   }
 
   if (discount.startsOn && today < discount.startsOn) {
-    return { label: "Terjadwal", className: "bg-amber-50 text-amber-700" };
+    return { label: "Terjadwal", tone: "warn" };
   }
 
   if (discount.endsOn && today > discount.endsOn) {
-    return { label: "Kedaluwarsa", className: "bg-red-50 text-red-700" };
+    return { label: "Kedaluwarsa", tone: "danger" };
   }
 
   if (
@@ -36,10 +47,10 @@ function getStatus(discount: AdminDiscount): Status {
     discount.usageLimit !== undefined &&
     discount.usedCount >= discount.usageLimit
   ) {
-    return { label: "Kuota habis", className: "bg-orange-50 text-orange-700" };
+    return { label: "Kuota habis", tone: "danger" };
   }
 
-  return { label: "Aktif", className: "bg-emerald-50 text-emerald-700" };
+  return { label: "Aktif", tone: "success" };
 }
 
 function formatPeriod(discount: AdminDiscount): string {
@@ -64,6 +75,15 @@ export default function AdminDiscountsPage() {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const activeCount = discounts.filter(
+    (discount) => getStatus(discount).label === "Aktif",
+  ).length;
+
+  const totalUsage = discounts.reduce(
+    (sum, discount) => sum + discount.usedCount,
+    0,
+  );
+
   async function handleDelete(discount: AdminDiscount) {
     if (
       !window.confirm(
@@ -78,8 +98,32 @@ export default function AdminDiscountsPage() {
     setDeletingId(null);
   }
 
+  const stats = [
+    {
+      label: "Total kode",
+      value: discounts.length,
+      hint: "Seluruh kampanye",
+      icon: TicketPercent,
+      tone: "ink" as const,
+    },
+    {
+      label: "Kode aktif",
+      value: activeCount,
+      hint: "Siap dipakai checkout",
+      icon: Zap,
+      tone: "sage" as const,
+    },
+    {
+      label: "Total pemakaian",
+      value: totalUsage,
+      hint: "Akumulasi seluruh kode",
+      icon: BadgePercent,
+      tone: "brass" as const,
+    },
+  ];
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="admin-shell admin-main">
       <AdminHeader
         email={email}
         loading={loading}
@@ -88,14 +132,15 @@ export default function AdminDiscountsPage() {
         onLogout={() => void logout()}
       />
 
-      <div className="mx-auto max-w-[1500px] space-y-6 px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div className="admin-container space-y-6">
+        <header className="admin-rise flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold text-emerald-700">PROMO</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-              Diskon
+            <p className="admin-eyebrow">Promo</p>
+            <h1 className="admin-title">
+              Diskon{" "}
+              <span className="serif-accent text-[#8a6a3a]">musiman.</span>
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+            <p className="admin-subtitle">
               Buat kode promo persen atau nominal, atur minimal belanja, masa
               berlaku, dan kuota pemakaian.
             </p>
@@ -103,128 +148,206 @@ export default function AdminDiscountsPage() {
 
           <Link
             href="/admin/discounts/new"
-            className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            className="admin-btn admin-btn-accent self-start sm:self-auto"
           >
-            + Tambah diskon
+            <Plus size={14} strokeWidth={2.2} aria-hidden="true" />
+            Tambah diskon
           </Link>
         </header>
 
         {error && (
           <section
             role="alert"
-            className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            className="flex flex-col gap-2 rounded-xl border border-[#a95f3d]/25 bg-[#fdf4ee] p-4 text-sm text-[#8f4a2c] sm:flex-row sm:items-center sm:justify-between"
           >
-            <p className="font-bold">Data diskon bermasalah</p>
-            <p className="mt-1 whitespace-pre-line">{error}</p>
+            <div>
+              <p className="font-semibold">Data diskon bermasalah</p>
+              <p className="mt-0.5 whitespace-pre-line text-xs text-[#a06a52]">
+                {error}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadDiscounts()}
+              className="admin-btn admin-btn-danger admin-btn-sm self-start sm:self-auto"
+            >
+              Coba lagi
+            </button>
           </section>
         )}
 
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-5">
-            <h2 className="text-lg font-bold">Daftar kode diskon</h2>
-            <span className="text-sm text-slate-500">
+        <section className="grid gap-4 sm:grid-cols-3">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+
+            return (
+              <article
+                key={stat.label}
+                className="admin-card admin-hover-lift flex items-center gap-4 p-5"
+              >
+                <span className="admin-icon-tile" data-tone={stat.tone}>
+                  <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#747569]">
+                    {stat.label}
+                  </p>
+                  <p className="admin-stat-value mt-1.5 text-[2rem]">
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-[10.5px] text-[#76776b]">
+                    {stat.hint}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+
+        <section className="admin-card admin-card--flush">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee9de] px-5 py-5 sm:px-6">
+            <div>
+              <p className="admin-eyebrow">Kampanye</p>
+              <h2 className="admin-section-title mt-2">Daftar kode diskon</h2>
+            </div>
+            <span className="admin-chip" data-tone="neutral">
+              <CalendarRange size={10} strokeWidth={2} aria-hidden="true" />
               {discounts.length} kode
             </span>
           </div>
 
           {loading && discounts.length === 0 ? (
-            <div className="p-8 text-sm text-slate-500">
-              Memeriksa akses admin dan memuat diskon...
+            <div className="space-y-3 p-6" aria-busy="true">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-16 animate-pulse rounded-xl bg-[#f6f2e9]"
+                />
+              ))}
             </div>
           ) : discounts.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="text-lg font-semibold">Belum ada kode diskon</p>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#8b8c80]">
+                <TicketPercent size={20} strokeWidth={1.5} aria-hidden="true" />
+              </span>
+              <p className="mt-4 text-sm font-semibold text-[#3c3d34]">
+                Belum ada kode diskon
+              </p>
+              <p className="mt-1 max-w-sm text-xs leading-5 text-[#6f7064]">
                 Tambahkan kode promo pertama untuk mulai memberikan potongan
                 harga di checkout.
               </p>
               <Link
                 href="/admin/discounts/new"
-                className="mt-5 inline-flex rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                className="admin-btn admin-btn-primary admin-btn-sm mt-5"
               >
+                <Plus size={13} strokeWidth={2.2} aria-hidden="true" />
                 Buat kode diskon
               </Link>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-sm">
-                <thead className="border-b border-slate-100 bg-slate-50/70 text-xs uppercase tracking-wide text-slate-500">
+              <table className="admin-table">
+                <thead>
                   <tr>
-                    <th className="px-5 py-3 font-semibold">Kode</th>
-                    <th className="px-5 py-3 font-semibold">Potongan</th>
-                    <th className="px-5 py-3 font-semibold">Min. belanja</th>
-                    <th className="px-5 py-3 font-semibold">Periode</th>
-                    <th className="px-5 py-3 font-semibold">Pemakaian</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 text-right font-semibold">
-                      Aksi
-                    </th>
+                    <th>Kode</th>
+                    <th>Potongan</th>
+                    <th>Min. belanja</th>
+                    <th>Periode</th>
+                    <th>Pemakaian</th>
+                    <th>Status</th>
+                    <th className="text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {discounts.map((discount) => {
                     const status = getStatus(discount);
+                    const usagePercent =
+                      discount.usageLimit && discount.usageLimit > 0
+                        ? Math.min(
+                            (discount.usedCount / discount.usageLimit) * 100,
+                            100,
+                          )
+                        : 0;
 
                     return (
-                      <tr key={discount.id} className="align-middle">
-                        <td className="px-5 py-4">
-                          <p className="font-mono text-sm font-bold tracking-wide">
+                      <tr key={discount.id}>
+                        <td>
+                          <span className="inline-flex rounded-md border border-[#e4dfd2] bg-[#faf7f0] px-2 py-1 font-mono text-[11px] font-bold tracking-[0.08em] text-[#3c3d34]">
                             {discount.code}
-                          </p>
+                          </span>
                           {discount.description && (
-                            <p className="mt-1 max-w-[240px] truncate text-xs text-slate-500">
+                            <p className="mt-1.5 max-w-[240px] truncate text-[10.5px] text-[#76776b]">
                               {discount.description}
                             </p>
                           )}
                         </td>
-                        <td className="px-5 py-4">
-                          <p className="font-semibold">
+                        <td>
+                          <p className="text-[12.5px] font-semibold text-[#2f302a]">
                             {formatDiscountValue(discount)}
                           </p>
                           {discount.maxDiscount ? (
-                            <p className="text-xs text-slate-400">
+                            <p className="mt-0.5 text-[10px] text-[#76776b]">
                               Maks. {formatRupiah(discount.maxDiscount)}
                             </p>
                           ) : null}
                         </td>
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="text-[11.5px] text-[#6b6c61]">
                           {discount.minSubtotal > 0
                             ? formatRupiah(discount.minSubtotal)
                             : "Tanpa minimum"}
                         </td>
-                        <td className="px-5 py-4 text-xs text-slate-600">
+                        <td className="whitespace-nowrap font-mono text-[10.5px] text-[#6b6c61]">
                           {formatPeriod(discount)}
                         </td>
-                        <td className="px-5 py-4 text-slate-600">
-                          {discount.usedCount}
-                          {discount.usageLimit
-                            ? ` / ${discount.usageLimit}`
-                            : " / ∞"}
+                        <td>
+                          <p className="font-mono text-[11px] text-[#56584d]">
+                            {discount.usedCount}
+                            <span className="text-[#b0b0a5]">
+                              {discount.usageLimit
+                                ? ` / ${discount.usageLimit}`
+                                : " / ∞"}
+                            </span>
+                          </p>
+                          {discount.usageLimit ? (
+                            <div className="mt-1.5 h-1 w-24 overflow-hidden rounded-full bg-[#f0ece2]">
+                              <div
+                                className="admin-bar h-full rounded-full bg-gradient-to-r from-[#8d9a7d] to-[#5b6650]"
+                                style={{ width: `${Math.max(usagePercent, 2)}%` }}
+                              />
+                            </div>
+                          ) : null}
                         </td>
-                        <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
-                          >
+                        <td>
+                          <span className="admin-chip" data-tone={status.tone}>
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-2">
+                        <td>
+                          <div className="flex items-center justify-end gap-1.5">
                             <Link
                               href={`/admin/discounts/${discount.id}/edit`}
-                              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                              className="admin-btn admin-btn-ghost admin-btn-sm"
                             >
+                              <Pencil
+                                size={12}
+                                strokeWidth={1.9}
+                                aria-hidden="true"
+                              />
                               Edit
                             </Link>
                             <button
                               type="button"
                               disabled={deletingId === discount.id}
                               onClick={() => void handleDelete(discount)}
-                              className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                              className="admin-btn admin-btn-danger admin-btn-sm"
                             >
-                              {deletingId === discount.id
-                                ? "Menghapus..."
-                                : "Hapus"}
+                              <Trash2
+                                size={12}
+                                strokeWidth={1.9}
+                                aria-hidden="true"
+                              />
+                              {deletingId === discount.id ? "…" : "Hapus"}
                             </button>
                           </div>
                         </td>
@@ -237,9 +360,9 @@ export default function AdminDiscountsPage() {
           )}
         </section>
 
-        <footer className="pb-4 text-xs text-slate-500">
-          Kode diskon diperiksa ulang di server saat checkout. Kuota pemakaian
-          bertambah hanya setelah pesanan berhasil dibuat.
+        <footer className="border-t border-[#e4dfd2] pb-4 pt-5 text-[10px] uppercase tracking-[0.12em] text-[#76776b]">
+          Kode diskon diperiksa ulang di server saat checkout · kuota bertambah
+          setelah pesanan berhasil dibuat
         </footer>
       </div>
     </main>

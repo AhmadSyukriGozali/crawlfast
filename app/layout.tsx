@@ -115,10 +115,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The storefront intro script intentionally writes `data-intro` and `has-js`
+  // to <html> before hydration, so suppress the attribute-only mismatch.
   return (
     <html
       lang="id"
       data-scroll-behavior="smooth"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${editorial.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-cream text-ink">

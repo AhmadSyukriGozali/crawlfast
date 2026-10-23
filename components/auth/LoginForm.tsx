@@ -1,9 +1,16 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Eye, EyeOff, LoaderCircle, LockKeyhole } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 function translateAuthError(message: string): string {
@@ -118,40 +125,54 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5" noValidate={false}>
-      <div className="space-y-2">
-        <label htmlFor="email" className="field-label">
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
+      <div>
+        <label htmlFor="email" className="admin-label">
           Email admin
         </label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          required
-          maxLength={254}
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="admin@crawlfast.store"
-          className="field"
-        />
+        <div className="relative">
+          <Mail
+            size={15}
+            strokeWidth={1.7}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#96968a]"
+          />
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            maxLength={254}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="admin@crawlfast.store"
+            className="admin-input admin-input--icon-left"
+          />
+        </div>
       </div>
 
-      <div className="space-y-2">
+      <div>
         <div className="flex items-center justify-between gap-3">
-          <label htmlFor="password" className="field-label">
+          <label htmlFor="password" className="admin-label">
             Password
           </label>
           <button
             type="button"
             onClick={() => void handleForgotPassword()}
             disabled={resetting}
-            className="text-[10px] text-sage underline underline-offset-4 hover:text-ink disabled:opacity-50"
+            className="-mt-1 text-[10px] font-semibold text-[#8a6a3a] underline decoration-[#b08d57]/35 underline-offset-4 transition hover:text-[#171814] disabled:opacity-50"
           >
             {resetting ? "Mengirim..." : "Lupa password?"}
           </button>
         </div>
 
         <div className="relative">
+          <LockKeyhole
+            size={15}
+            strokeWidth={1.7}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#96968a]"
+          />
           <input
             id="password"
             type={showPassword ? "text" : "password"}
@@ -162,59 +183,70 @@ export default function LoginForm() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="••••••••"
-            className="field pr-12"
+            className="admin-input admin-input--icon-left admin-input--icon-right"
           />
           <button
             type="button"
             onClick={() => setShowPassword((current) => !current)}
-            aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-ink-muted hover:text-ink"
+            aria-label={
+              showPassword ? "Sembunyikan password" : "Tampilkan password"
+            }
+            className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-[#76776b] transition hover:bg-[#f2e8d5] hover:text-[#171814]"
           >
-            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
       </div>
 
       {message && (
-        <p
+        <div
           role={messageType === "error" ? "alert" : "status"}
-          className={`p-3 text-xs leading-5 ${
+          className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-[11px] leading-5 ${
             messageType === "error"
-              ? "border border-red-900/20 bg-red-50 text-red-800"
-              : "border border-sage/30 bg-sage/10 text-sage"
+              ? "border-[#a95f3d]/25 bg-[#fdf4ee] text-[#8f4a2c]"
+              : "border-[#5b6650]/25 bg-[#eef0e7] text-[#4b5741]"
           }`}
         >
-          {message}
-        </p>
+          {messageType === "error" ? (
+            <AlertCircle
+              size={14}
+              strokeWidth={1.9}
+              aria-hidden="true"
+              className="mt-0.5 shrink-0"
+            />
+          ) : (
+            <CheckCircle2
+              size={14}
+              strokeWidth={1.9}
+              aria-hidden="true"
+              className="mt-0.5 shrink-0"
+            />
+          )}
+          <span>{message}</span>
+        </div>
       )}
 
       <button
         type="submit"
         disabled={loading || resetting}
-        className="btn btn-primary w-full"
+        className="admin-btn admin-btn-primary admin-btn-lg w-full"
       >
         {loading ? (
           <>
-            <LoaderCircle size={16} className="animate-spin" />
+            <LoaderCircle
+              size={15}
+              className="animate-spin"
+              aria-hidden="true"
+            />
             Memverifikasi...
           </>
         ) : (
           <>
-            <LockKeyhole size={15} />
+            <LockKeyhole size={14} strokeWidth={1.9} aria-hidden="true" />
             Masuk ke panel admin
           </>
         )}
       </button>
-
-      <div className="flex items-center justify-between gap-3 border-t border-line pt-4 text-[10px] uppercase tracking-[0.1em] text-ink-muted">
-        <Link href="/" className="inline-flex items-center gap-1.5 hover:text-ink">
-          <ArrowLeft size={12} />
-          Kembali ke toko
-        </Link>
-        <Link href="/privacy" className="hover:text-ink">
-          Privasi
-        </Link>
-      </div>
     </form>
   );
 }

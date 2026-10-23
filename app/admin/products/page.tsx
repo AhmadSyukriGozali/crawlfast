@@ -3,6 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import {
+  Boxes,
+  Eye,
+  ExternalLink,
+  Pencil,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { useAdminProducts } from "@/features/products/hooks/useAdminProducts";
 import { formatRupiah } from "@/lib/format";
@@ -57,8 +67,32 @@ export default function AdminProductsPage() {
     setDeletingId(null);
   }
 
+  const stats = [
+    {
+      label: "Total produk",
+      value: products.length,
+      hint: "Seluruh katalog",
+      icon: Boxes,
+      tone: "ink" as const,
+    },
+    {
+      label: "Tayang",
+      value: activeCount,
+      hint: "Terlihat di storefront",
+      icon: Eye,
+      tone: "sage" as const,
+    },
+    {
+      label: "Featured",
+      value: featuredCount,
+      hint: "Pilihan editor",
+      icon: Sparkles,
+      tone: "brass" as const,
+    },
+  ];
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="admin-shell admin-main">
       <AdminHeader
         email={email}
         loading={loading}
@@ -67,14 +101,15 @@ export default function AdminProductsPage() {
         onLogout={() => void logout()}
       />
 
-      <div className="mx-auto max-w-[1500px] space-y-6 px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div className="admin-container space-y-6">
+        <header className="admin-rise flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold text-emerald-700">CATALOG</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-              Produk
+            <p className="admin-eyebrow">Catalog</p>
+            <h1 className="admin-title">
+              Produk{" "}
+              <span className="serif-accent text-[#8a6a3a]">atelier.</span>
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+            <p className="admin-subtitle">
               Kelola produk yang tampil di storefront, termasuk harga, foto,
               ukuran, dan status publikasi.
             </p>
@@ -82,169 +117,229 @@ export default function AdminProductsPage() {
 
           <Link
             href="/admin/products/new"
-            className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            className="admin-btn admin-btn-accent self-start sm:self-auto"
           >
-            + Tambah produk
+            <Plus size={14} strokeWidth={2.2} aria-hidden="true" />
+            Tambah produk
           </Link>
         </header>
 
         {error && (
           <section
             role="alert"
-            className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            className="flex flex-col gap-2 rounded-xl border border-[#a95f3d]/25 bg-[#fdf4ee] p-4 text-sm text-[#8f4a2c] sm:flex-row sm:items-center sm:justify-between"
           >
-            <p className="font-bold">Data produk bermasalah</p>
-            <p className="mt-1 whitespace-pre-line">{error}</p>
+            <div>
+              <p className="font-semibold">Data produk bermasalah</p>
+              <p className="mt-0.5 whitespace-pre-line text-xs text-[#a06a52]">
+                {error}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadProducts()}
+              className="admin-btn admin-btn-danger admin-btn-sm self-start sm:self-auto"
+            >
+              Coba lagi
+            </button>
           </section>
         )}
 
         <section className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Total produk
-            </p>
-            <p className="mt-2 text-3xl font-black">{products.length}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Tayang
-            </p>
-            <p className="mt-2 text-3xl font-black text-emerald-700">
-              {activeCount}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Featured
-            </p>
-            <p className="mt-2 text-3xl font-black">{featuredCount}</p>
-          </div>
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+
+            return (
+              <article
+                key={stat.label}
+                className="admin-card admin-hover-lift flex items-center gap-4 p-5"
+              >
+                <span className="admin-icon-tile" data-tone={stat.tone}>
+                  <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#747569]">
+                    {stat.label}
+                  </p>
+                  <p className="admin-stat-value mt-1.5 text-[2rem]">
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-[10.5px] text-[#76776b]">
+                    {stat.hint}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <section className="admin-card admin-card--flush">
+          <div className="flex flex-col gap-3 border-b border-[#eee9de] bg-[#fdfbf6] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row">
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Cari nama, slug, atau kategori..."
-                aria-label="Cari produk"
-                className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              />
-              <select
-                value={status}
-                onChange={(event) => setStatus(event.target.value)}
-                aria-label="Filter status produk"
-                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-500"
-              >
-                <option value="all">Semua status</option>
-                <option value="active">Tayang</option>
-                <option value="inactive">Disembunyikan</option>
-              </select>
+              <label className="relative flex-1 sm:max-w-md">
+                <span className="sr-only">Cari produk</span>
+                <Search
+                  size={15}
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#76776b]"
+                />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Cari nama, slug, atau kategori…"
+                  aria-label="Cari produk"
+                  className="admin-input admin-input--icon-left"
+                />
+              </label>
+              <div className="sm:w-48 sm:shrink-0">
+                <select
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value)}
+                  aria-label="Filter status produk"
+                  className="admin-select"
+                >
+                  <option value="all">Semua status</option>
+                  <option value="active">Tayang</option>
+                  <option value="inactive">Disembunyikan</option>
+                </select>
+              </div>
             </div>
-            <p className="text-sm text-slate-500">
-              {filtered.length} dari {products.length} produk
+            <p className="text-[11px] text-[#6f7064]">
+              <strong className="font-semibold text-[#3c3d34]">
+                {filtered.length}
+              </strong>{" "}
+              dari {products.length} produk
             </p>
           </div>
 
           {loading && products.length === 0 ? (
-            <div className="p-8 text-sm text-slate-500">
-              Memeriksa akses admin dan memuat produk...
+            <div className="space-y-3 p-6" aria-busy="true">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-16 animate-pulse rounded-xl bg-[#f6f2e9]"
+                />
+              ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="p-10 text-center text-sm text-slate-500">
-              Belum ada produk yang cocok.
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#8b8c80]">
+                <Boxes size={20} strokeWidth={1.5} aria-hidden="true" />
+              </span>
+              <p className="mt-4 text-sm font-semibold text-[#3c3d34]">
+                Belum ada produk yang cocok
+              </p>
+              <p className="mt-1 text-xs text-[#6f7064]">
+                Ubah kata kunci atau tambahkan produk baru.
+              </p>
+              <Link
+                href="/admin/products/new"
+                className="admin-btn admin-btn-primary admin-btn-sm mt-5"
+              >
+                <Plus size={13} strokeWidth={2.2} aria-hidden="true" />
+                Tambah produk
+              </Link>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left text-sm">
-                <thead className="border-b border-slate-100 bg-slate-50/70 text-xs uppercase tracking-wide text-slate-500">
+              <table className="admin-table">
+                <thead>
                   <tr>
-                    <th className="px-5 py-3 font-semibold">Produk</th>
-                    <th className="px-5 py-3 font-semibold">Kategori</th>
-                    <th className="px-5 py-3 font-semibold">Harga</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 font-semibold">Featured</th>
-                    <th className="px-5 py-3 text-right font-semibold">
-                      Aksi
-                    </th>
+                    <th>Produk</th>
+                    <th>Kategori</th>
+                    <th>Harga</th>
+                    <th>Status</th>
+                    <th>Featured</th>
+                    <th className="text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {filtered.map((product) => (
-                    <tr key={product.id} className="align-middle">
-                      <td className="px-5 py-4">
+                    <tr key={product.id}>
+                      <td>
                         <div className="flex items-center gap-3">
-                          <div className="relative h-16 w-13 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                          <div className="relative h-14 w-11 shrink-0 overflow-hidden rounded-lg border border-[#e4dfd2] bg-[#f1ece0]">
                             <Image
                               src={product.image}
                               alt={product.imageAlt}
                               fill
-                              sizes="52px"
+                              sizes="44px"
                               className="object-cover"
                             />
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-slate-900">
+                            <p className="truncate text-[12.5px] font-semibold text-[#2f302a]">
                               {product.name}
                             </p>
-                            <p className="mt-0.5 font-mono text-xs text-slate-500">
+                            <p className="mt-0.5 font-mono text-[10px] text-[#76776b]">
                               /{product.slug}
                             </p>
                             {product.tag && (
-                              <span className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                              <span className="mt-1 inline-flex rounded-full border border-[#b08d57]/25 bg-[#f2e8d5] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em] text-[#7d5d2f]">
                                 {product.tag}
                               </span>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-600">
+                      <td className="text-[11.5px] text-[#6b6c61]">
                         {product.category}
                       </td>
-                      <td className="px-5 py-4">
-                        <p className="font-semibold">
+                      <td>
+                        <p className="text-[12.5px] font-semibold text-[#2f302a]">
                           {formatRupiah(product.price)}
                         </p>
                         {product.compareAtPrice && (
-                          <p className="text-xs text-slate-400 line-through">
+                          <p className="mt-0.5 text-[10px] text-[#b0b0a5] line-through">
                             {formatRupiah(product.compareAtPrice)}
                           </p>
                         )}
                       </td>
-                      <td className="px-5 py-4">
+                      <td>
                         <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            product.isActive
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
+                          className="admin-chip"
+                          data-tone={product.isActive ? "success" : "neutral"}
                         >
                           {product.isActive ? "Tayang" : "Disembunyikan"}
                         </span>
                       </td>
-                      <td className="px-5 py-4">
+                      <td>
                         {product.featured ? (
-                          <span className="font-semibold text-emerald-700">
+                          <span className="admin-chip" data-tone="warn">
                             Ya
                           </span>
                         ) : (
-                          <span className="text-slate-400">Tidak</span>
+                          <span className="text-[11px] text-[#b0b0a5]">
+                            Tidak
+                          </span>
                         )}
                       </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                      <td>
+                        <div className="flex items-center justify-end gap-1.5">
                           <Link
                             href={`/products/${product.slug}`}
                             target="_blank"
-                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                            aria-label={`Lihat ${product.name} di storefront`}
+                            className="admin-btn admin-btn-ghost admin-btn-sm"
                           >
+                            <ExternalLink
+                              size={12}
+                              strokeWidth={1.9}
+                              aria-hidden="true"
+                            />
                             Lihat
                           </Link>
                           <Link
                             href={`/admin/products/${product.id}/edit`}
-                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                            aria-label={`Edit ${product.name}`}
+                            className="admin-btn admin-btn-ghost admin-btn-sm"
                           >
+                            <Pencil
+                              size={12}
+                              strokeWidth={1.9}
+                              aria-hidden="true"
+                            />
                             Edit
                           </Link>
                           <button
@@ -253,11 +348,15 @@ export default function AdminProductsPage() {
                             onClick={() =>
                               void handleDelete(product.id, product.name)
                             }
-                            className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                            aria-label={`Hapus ${product.name}`}
+                            className="admin-btn admin-btn-danger admin-btn-sm"
                           >
-                            {deletingId === product.id
-                              ? "Menghapus..."
-                              : "Hapus"}
+                            <Trash2
+                              size={12}
+                              strokeWidth={1.9}
+                              aria-hidden="true"
+                            />
+                            {deletingId === product.id ? "…" : "Hapus"}
                           </button>
                         </div>
                       </td>
@@ -269,9 +368,12 @@ export default function AdminProductsPage() {
           )}
         </section>
 
-        <footer className="pb-4 text-xs text-slate-500">
-          Produk disimpan di tabel Supabase `products`. Perubahan langsung
-          memengaruhi storefront setelah cache produk diperbarui.
+        <footer className="border-t border-[#e4dfd2] pb-4 pt-5 text-[10px] uppercase tracking-[0.12em] text-[#76776b]">
+          Produk tersimpan di tabel Supabase{" "}
+          <span className="font-mono normal-case tracking-normal text-[#6b6c61]">
+            products
+          </span>{" "}
+          · perubahan langsung memengaruhi storefront
         </footer>
       </div>
     </main>

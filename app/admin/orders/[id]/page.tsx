@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense } from "react";
@@ -16,10 +15,14 @@ export default function AdminOrderDetailPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-slate-50 p-6">
-          <div className="mx-auto max-w-6xl animate-pulse">
-            <div className="h-8 w-56 rounded bg-slate-200" />
-            <div className="mt-6 h-64 rounded-xl bg-slate-200" />
+        <main className="admin-shell admin-main">
+          <div className="admin-container max-w-[1200px] space-y-4">
+            <div className="h-4 w-40 animate-pulse rounded bg-[#e9e4d8]" />
+            <div className="h-24 animate-pulse rounded-xl bg-[#e9e4d8]" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="h-56 animate-pulse rounded-xl bg-[#e9e4d8]" />
+              <div className="h-56 animate-pulse rounded-xl bg-[#e9e4d8]" />
+            </div>
           </div>
         </main>
       }

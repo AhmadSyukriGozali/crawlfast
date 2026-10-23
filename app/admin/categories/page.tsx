@@ -2,6 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import {
+  Eye,
+  Layers3,
+  Pencil,
+  Plus,
+  Search,
+  Tags,
+  Trash2,
+} from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { useAdminCategories } from "@/features/categories/hooks/useAdminCategories";
 import type { AdminCategory } from "@/features/categories/types";
@@ -50,8 +59,25 @@ export default function AdminCategoriesPage() {
     setDeletingId(null);
   }
 
+  const stats = [
+    {
+      label: "Total kategori",
+      value: categories.length,
+      hint: "Struktur katalog",
+      icon: Layers3,
+      tone: "ink" as const,
+    },
+    {
+      label: "Aktif di storefront",
+      value: activeCount,
+      hint: "Tampil sebagai filter",
+      icon: Eye,
+      tone: "sage" as const,
+    },
+  ];
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="admin-shell admin-main">
       <AdminHeader
         email={email}
         loading={loading}
@@ -60,31 +86,31 @@ export default function AdminCategoriesPage() {
         onLogout={() => void logout()}
       />
 
-      <div className="mx-auto max-w-[1500px] space-y-6 px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div className="admin-container space-y-6">
+        <header className="admin-rise flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold text-emerald-700">CATALOG</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-              Kategori
+            <p className="admin-eyebrow">Catalog</p>
+            <h1 className="admin-title">
+              Kategori{" "}
+              <span className="serif-accent text-[#8a6a3a]">koleksi.</span>
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+            <p className="admin-subtitle">
               Kelola kategori produk yang dipakai sebagai filter di storefront.
               Kategori yang masih dipakai produk tidak bisa dihapus.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/admin/products"
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
+          <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+            <Link href="/admin/products" className="admin-btn admin-btn-ghost">
+              <Tags size={13} strokeWidth={1.9} aria-hidden="true" />
               Lihat produk
             </Link>
             <Link
               href="/admin/categories/new"
-              className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              className="admin-btn admin-btn-accent"
             >
-              + Tambah kategori
+              <Plus size={14} strokeWidth={2.2} aria-hidden="true" />
+              Tambah kategori
             </Link>
           </div>
         </header>
@@ -92,113 +118,189 @@ export default function AdminCategoriesPage() {
         {error && (
           <section
             role="alert"
-            className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            className="flex flex-col gap-2 rounded-xl border border-[#a95f3d]/25 bg-[#fdf4ee] p-4 text-sm text-[#8f4a2c] sm:flex-row sm:items-center sm:justify-between"
           >
-            <p className="font-bold">Data kategori bermasalah</p>
-            <p className="mt-1 whitespace-pre-line">{error}</p>
+            <div>
+              <p className="font-semibold">Data kategori bermasalah</p>
+              <p className="mt-0.5 whitespace-pre-line text-xs text-[#a06a52]">
+                {error}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadCategories()}
+              className="admin-btn admin-btn-danger admin-btn-sm self-start sm:self-auto"
+            >
+              Coba lagi
+            </button>
           </section>
         )}
 
         <section className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Total kategori
-            </p>
-            <p className="mt-2 text-3xl font-black">{categories.length}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Aktif di storefront
-            </p>
-            <p className="mt-2 text-3xl font-black text-emerald-700">
-              {activeCount}
-            </p>
-          </div>
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+
+            return (
+              <article
+                key={stat.label}
+                className="admin-card admin-hover-lift flex items-center gap-4 p-5"
+              >
+                <span className="admin-icon-tile" data-tone={stat.tone}>
+                  <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#747569]">
+                    {stat.label}
+                  </p>
+                  <p className="admin-stat-value mt-1.5 text-[2rem]">
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-[10.5px] text-[#76776b]">
+                    {stat.hint}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Cari nama, slug, atau deskripsi..."
-              aria-label="Cari kategori"
-              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 sm:max-w-md"
-            />
-            <p className="text-sm text-slate-500">
-              {filtered.length} dari {categories.length} kategori
+        <section className="admin-card admin-card--flush">
+          <div className="flex flex-col gap-3 border-b border-[#eee9de] bg-[#fdfbf6] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <label className="relative flex-1 sm:max-w-md">
+              <span className="sr-only">Cari kategori</span>
+              <Search
+                size={15}
+                strokeWidth={1.7}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#76776b]"
+              />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Cari nama, slug, atau deskripsi…"
+                aria-label="Cari kategori"
+                className="admin-input admin-input--icon-left"
+              />
+            </label>
+            <p className="text-[11px] text-[#6f7064]">
+              <strong className="font-semibold text-[#3c3d34]">
+                {filtered.length}
+              </strong>{" "}
+              dari {categories.length} kategori
             </p>
           </div>
 
           {loading && categories.length === 0 ? (
-            <div className="p-8 text-sm text-slate-500">
-              Memeriksa akses admin dan memuat kategori...
+            <div className="space-y-3 p-6" aria-busy="true">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-14 animate-pulse rounded-xl bg-[#f6f2e9]"
+                />
+              ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="p-10 text-center text-sm text-slate-500">
-              {categories.length === 0
-                ? "Belum ada kategori. Tambahkan kategori pertama untuk mulai mengelompokkan produk."
-                : "Belum ada kategori yang cocok."}
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#8b8c80]">
+                <Layers3 size={20} strokeWidth={1.5} aria-hidden="true" />
+              </span>
+              <p className="mt-4 text-sm font-semibold text-[#3c3d34]">
+                {categories.length === 0
+                  ? "Belum ada kategori"
+                  : "Belum ada kategori yang cocok"}
+              </p>
+              <p className="mt-1 max-w-sm text-xs leading-5 text-[#6f7064]">
+                {categories.length === 0
+                  ? "Tambahkan kategori pertama untuk mulai mengelompokkan produk."
+                  : "Coba ubah kata kunci pencarian."}
+              </p>
+              {categories.length === 0 && (
+                <Link
+                  href="/admin/categories/new"
+                  className="admin-btn admin-btn-primary admin-btn-sm mt-5"
+                >
+                  <Plus size={13} strokeWidth={2.2} aria-hidden="true" />
+                  Tambah kategori
+                </Link>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] text-left text-sm">
-                <thead className="border-b border-slate-100 bg-slate-50/70 text-xs uppercase tracking-wide text-slate-500">
+              <table className="admin-table">
+                <thead>
                   <tr>
-                    <th className="px-5 py-3 font-semibold">Kategori</th>
-                    <th className="px-5 py-3 font-semibold">Deskripsi</th>
-                    <th className="px-5 py-3 font-semibold">Urutan</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 text-right font-semibold">
-                      Aksi
-                    </th>
+                    <th>Kategori</th>
+                    <th>Deskripsi</th>
+                    <th>Urutan</th>
+                    <th>Status</th>
+                    <th className="text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {filtered.map((category) => (
-                    <tr key={category.id} className="align-top">
-                      <td className="px-5 py-4">
-                        <p className="font-bold text-slate-900">
-                          {category.name}
+                    <tr key={category.id}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#e4dfd2] bg-[#f7f3ea] text-[#8a6a3a]">
+                            <Tags
+                              size={14}
+                              strokeWidth={1.7}
+                              aria-hidden="true"
+                            />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-[12.5px] font-semibold text-[#2f302a]">
+                              {category.name}
+                            </p>
+                            <p className="mt-0.5 font-mono text-[10px] text-[#76776b]">
+                              {category.slug}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="max-w-[360px]">
+                        <p className="line-clamp-2 text-[11.5px] leading-5 text-[#6b6c61]">
+                          {category.description || "—"}
                         </p>
-                        <p className="mt-1 font-mono text-xs text-slate-400">
-                          {category.slug}
-                        </p>
                       </td>
-                      <td className="max-w-[360px] px-5 py-4 text-slate-500">
-                        {category.description || "—"}
+                      <td>
+                        <span className="inline-flex min-w-7 items-center justify-center rounded-md border border-[#e4dfd2] bg-[#faf7f0] px-1.5 py-0.5 font-mono text-[10.5px] text-[#6b6c61]">
+                          {category.sortOrder}
+                        </span>
                       </td>
-                      <td className="px-5 py-4 font-mono text-slate-600">
-                        {category.sortOrder}
-                      </td>
-                      <td className="px-5 py-4">
+                      <td>
                         <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            category.isActive
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
+                          className="admin-chip"
+                          data-tone={category.isActive ? "success" : "neutral"}
                         >
                           {category.isActive ? "Aktif" : "Nonaktif"}
                         </span>
                       </td>
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end gap-2">
+                      <td>
+                        <div className="flex justify-end gap-1.5">
                           <Link
                             href={`/admin/categories/${category.id}/edit`}
-                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                            className="admin-btn admin-btn-ghost admin-btn-sm"
                           >
+                            <Pencil
+                              size={12}
+                              strokeWidth={1.9}
+                              aria-hidden="true"
+                            />
                             Ubah
                           </Link>
                           <button
                             type="button"
                             onClick={() => void handleDelete(category)}
                             disabled={deletingId === category.id}
-                            className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                            className="admin-btn admin-btn-danger admin-btn-sm"
                           >
-                            {deletingId === category.id
-                              ? "Menghapus..."
-                              : "Hapus"}
+                            <Trash2
+                              size={12}
+                              strokeWidth={1.9}
+                              aria-hidden="true"
+                            />
+                            {deletingId === category.id ? "…" : "Hapus"}
                           </button>
                         </div>
                       </td>
@@ -209,6 +311,11 @@ export default function AdminCategoriesPage() {
             </div>
           )}
         </section>
+
+        <footer className="border-t border-[#e4dfd2] pb-4 pt-5 text-[10px] uppercase tracking-[0.12em] text-[#76776b]">
+          Kategori aktif tampil sebagai filter storefront · urutan kecil tampil
+          lebih dulu
+        </footer>
       </div>
     </main>
   );

@@ -1,10 +1,23 @@
-
 "use client";
 
 import Link from "next/link";
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import {
+  ArrowLeft,
+  CalendarDays,
+  CreditCard,
+  MapPin,
+  Package,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  User,
+} from "lucide-react";
+import AdminHeader from "@/components/admin/AdminHeader";
+import StatusBadge from "@/components/admin/StatusBadge";
 import { useAdminOrderDetail } from "@/features/orders/hooks/useAdminOrderDetail";
+import { useAdminSession } from "@/features/admin/useAdminSession";
 import type { Order } from "@/features/orders/types";
 import { formatDate, formatStatus, money } from "@/features/orders/utils";
 
@@ -25,6 +38,25 @@ const ORDER_STATUS_OPTIONS = [
   { value: "completed", label: "Selesai" },
   { value: "cancelled", label: "Dibatalkan" },
 ] as const;
+
+function InfoRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 border-t border-[#f0ece2] py-2.5 first:border-t-0 first:pt-0">
+      <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#76776b]">
+        {label}
+      </dt>
+      <dd className="whitespace-pre-line text-[12px] font-medium text-[#3c3d34]">
+        {children || "—"}
+      </dd>
+    </div>
+  );
+}
 
 function OrderStatusForm({
   order,
@@ -66,24 +98,26 @@ function OrderStatusForm({
   }
 
   return (
-    <div className="mt-5 border-t border-slate-200 pt-5">
-      <h3 className="text-sm font-semibold">Ubah status manual</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-500">
+    <div className="mt-5 border-t border-[#eee9de] pt-5">
+      <h3 className="text-[12px] font-semibold text-[#2f302a]">
+        Ubah status manual
+      </h3>
+      <p className="mt-1 text-[10.5px] leading-5 text-[#6f7064]">
         Gunakan bagian ini untuk mengonfirmasi pembayaran WhatsApp atau
         memperbarui proses pesanan. Status lunas akan mengisi tanggal
         pembayaran otomatis.
       </p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-medium text-slate-700">
-          Status pembayaran
+      <div className="mt-4 space-y-3">
+        <label className="block">
+          <span className="admin-label">Status pembayaran</span>
           <select
             value={paymentStatus}
             onChange={(event) => {
               setPaymentStatus(event.target.value);
               setStatusMessage("");
             }}
-            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal outline-none focus:border-emerald-500"
+            className="admin-select"
           >
             {PAYMENT_STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -93,15 +127,15 @@ function OrderStatusForm({
           </select>
         </label>
 
-        <label className="text-sm font-medium text-slate-700">
-          Status pesanan
+        <label className="block">
+          <span className="admin-label">Status pesanan</span>
           <select
             value={orderStatus}
             onChange={(event) => {
               setOrderStatus(event.target.value);
               setStatusMessage("");
             }}
-            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal outline-none focus:border-emerald-500"
+            className="admin-select"
           >
             {ORDER_STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -113,13 +147,13 @@ function OrderStatusForm({
       </div>
 
       {statusError && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="mt-3 rounded-lg border border-[#a95f3d]/25 bg-[#fdf4ee] px-3 py-2 text-[11px] text-[#8f4a2c]">
           {statusError}
         </p>
       )}
 
       {statusMessage && (
-        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <p className="mt-3 rounded-lg border border-[#7d8a6d]/30 bg-[#eef0e7] px-3 py-2 text-[11px] text-[#4b5741]">
           {statusMessage}
         </p>
       )}
@@ -128,8 +162,9 @@ function OrderStatusForm({
         type="button"
         onClick={() => void handleStatusUpdate()}
         disabled={savingStatus}
-        className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-50"
+        className="admin-btn admin-btn-primary mt-4 w-full"
       >
+        <Save size={13} strokeWidth={1.9} aria-hidden="true" />
         {savingStatus ? "Menyimpan..." : "Simpan status"}
       </button>
     </div>
@@ -140,254 +175,343 @@ export default function OrderDetailClient() {
   const params = useParams<{ id: string }>();
   const id = typeof params.id === "string" ? params.id : "";
 
+  const session = useAdminSession();
   const { order, loading, error, loadOrder, updateStatus } =
     useAdminOrderDetail(id);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto max-w-6xl animate-pulse space-y-4">
-          <div className="h-8 w-64 rounded bg-slate-200" />
-          <div className="h-64 rounded-xl bg-slate-200" />
-          <div className="h-48 rounded-xl bg-slate-200" />
-        </div>
-      </main>
-    );
-  }
-
-  if (error || !order) {
-    return (
-      <main className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto max-w-4xl rounded-xl border border-slate-200 bg-white p-6">
-          <h1 className="text-xl font-bold text-slate-900">
-            Detail Pesanan Tidak Tersedia
-          </h1>
-          <p className="mt-2 text-sm text-red-600">
-            {error || "Pesanan tidak ditemukan."}
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => void loadOrder()}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-            >
-              Coba Lagi
-            </button>
-            <Link
-              href="/admin"
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              Kembali ke Dashboard
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-slate-50 p-4 text-slate-900 sm:p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <Link
-              href="/admin"
-              className="text-sm font-medium text-emerald-700 hover:underline"
-            >
-              &larr; Kembali ke Dashboard
-            </Link>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight">
-              Detail Pesanan
+    <main className="admin-shell admin-main">
+      <AdminHeader
+        email={session.email}
+        loading={loading || session.loading}
+        active="orders"
+        onRefresh={() => void loadOrder()}
+        onLogout={() => void session.logout()}
+      />
+
+      {loading && !order ? (
+        <div className="admin-container max-w-[1200px] space-y-4">
+          <div className="h-4 w-40 animate-pulse rounded bg-[#e9e4d8]" />
+          <div className="h-24 animate-pulse rounded-xl bg-[#e9e4d8]" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="h-56 animate-pulse rounded-xl bg-[#e9e4d8]" />
+            <div className="h-56 animate-pulse rounded-xl bg-[#e9e4d8]" />
+          </div>
+        </div>
+      ) : error || !order ? (
+        <div className="admin-container max-w-[900px]">
+          <div className="admin-card p-6">
+            <p className="admin-eyebrow">Order detail</p>
+            <h1 className="admin-title text-2xl">
+              Pesanan tidak tersedia.
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Nomor pesanan: {order.order_number}
+            <p className="mt-2 text-sm text-[#8f4a2c]">
+              {error || "Pesanan tidak ditemukan."}
             </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void loadOrder()}
+                className="admin-btn admin-btn-primary"
+              >
+                <RefreshCw size={13} strokeWidth={1.9} aria-hidden="true" />
+                Coba lagi
+              </button>
+              <Link href="/admin" className="admin-btn admin-btn-ghost">
+                Kembali ke dasbor
+              </Link>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadOrder()}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-100"
+        </div>
+      ) : (
+        <div className="admin-container max-w-[1200px] space-y-5">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6f7064] transition hover:text-[#171814]"
           >
-            Muat Ulang
-          </button>
-        </header>
+            <ArrowLeft size={12} strokeWidth={2} aria-hidden="true" />
+            Kembali ke dasbor
+          </Link>
 
-        <section className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="font-semibold">Informasi Pelanggan</h2>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div>
-                <dt className="text-slate-500">Nama</dt>
-                <dd className="font-medium">{order.customer_name || "-"}</dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Email</dt>
-                <dd className="break-words font-medium">
-                  {order.customer_email || "-"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Nomor Telepon</dt>
-                <dd className="font-medium">{order.customer_phone || "-"}</dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Catatan Pelanggan</dt>
-                <dd className="whitespace-pre-line font-medium">
-                  {order.customer_notes || "-"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="font-semibold">Informasi Pembayaran & Pengiriman</h2>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div>
-                <dt className="text-slate-500">Alamat Pengiriman</dt>
-                <dd className="whitespace-pre-line font-medium">
-                  {order.shipping_address || "-"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Kota</dt>
-                <dd className="font-medium">{order.shipping_city || "-"}</dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Provinsi</dt>
-                <dd className="font-medium">
-                  {order.shipping_province || "-"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Kode Pos</dt>
-                <dd className="font-medium">
-                  {order.shipping_postal_code || "-"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Metode Pembayaran</dt>
-                <dd className="font-medium">
-                  {order.payment_gateway || "-"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Tanggal Pesanan</dt>
-                <dd className="font-medium">{formatDate(order.created_at)}</dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Tanggal Pembayaran Berhasil</dt>
-                <dd className="font-medium">
-                  {order.paid_at ? formatDate(order.paid_at) : "-"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="font-semibold">Status Pesanan</h2>
-          <div className="mt-4 flex flex-wrap gap-6">
+          <header className="admin-rise flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="mb-2 text-sm text-slate-500">Status pesanan</p>
-              <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
-                {formatStatus(order.order_status)}
-              </span>
+              <p className="admin-eyebrow">Order detail</p>
+              <h1 className="admin-title font-mono text-[clamp(1.4rem,2.2vw,2.1rem)]">
+                {order.order_number}
+              </h1>
+              <p className="admin-subtitle inline-flex items-center gap-1.5">
+                <CalendarDays
+                  size={12}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                {formatDate(order.created_at)} · {order.customer_name}
+              </p>
             </div>
-            <div>
-              <p className="mb-2 text-sm text-slate-500">Status pembayaran</p>
-              <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
-                {formatStatus(order.payment_status)}
-              </span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge value={order.payment_status} />
+              <StatusBadge value={order.order_status} />
+              <button
+                type="button"
+                onClick={() => void loadOrder()}
+                className="admin-btn admin-btn-ghost admin-btn-sm"
+              >
+                <RefreshCw size={12} strokeWidth={1.9} aria-hidden="true" />
+                Muat ulang
+              </button>
             </div>
-          </div>
+          </header>
 
-          <OrderStatusForm
-            key={order.id}
-            order={order}
-            updateStatus={updateStatus}
-          />
-        </section>
-
-        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 p-5">
-            <h2 className="font-semibold">Item Pesanan</h2>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-5 py-3">Produk</th>
-                  <th className="px-5 py-3">Ukuran</th>
-                  <th className="px-5 py-3 text-right">Harga</th>
-                  <th className="px-5 py-3 text-right">Jumlah</th>
-                  <th className="px-5 py-3 text-right">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {order.order_items?.length ? (
-                  order.order_items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-5 py-4 font-medium">
-                        {item.product_name}
-                      </td>
-                      <td className="px-5 py-4">{item.size || "-"}</td>
-                      <td className="px-5 py-4 text-right">
-                        {money.format(Number(item.unit_price) || 0)}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        {item.quantity}
-                      </td>
-                      <td className="px-5 py-4 text-right font-medium">
-                        {money.format(Number(item.line_total) || 0)}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-5 py-8 text-center text-slate-500"
-                    >
-                      Tidak ada item pesanan.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="border-t border-slate-200 p-5">
-            <div className="ml-auto max-w-sm space-y-3 text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">Subtotal produk</span>
-                <span>{money.format(Number(order.subtotal) || 0)}</span>
+          <section className="admin-card admin-card--flush">
+            <div className="grid grid-cols-2 divide-[#eee9de] sm:grid-cols-4 sm:divide-x">
+              <div className="px-5 py-4">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#747569]">
+                  Total pesanan
+                </p>
+                <p className="admin-stat-value mt-2 text-[1.65rem]">
+                  {money.format(Number(order.total_amount) || 0)}
+                </p>
               </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">Ongkos kirim</span>
-                <span>{money.format(Number(order.shipping_cost) || 0)}</span>
+              <div className="px-5 py-4">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#747569]">
+                  Pembayaran
+                </p>
+                <p className="mt-2.5">
+                  <StatusBadge value={order.payment_status} />
+                </p>
               </div>
-              {Number(order.discount_amount) > 0 && (
-                <div className="flex justify-between gap-4 text-emerald-700">
-                  <span>
-                    Diskon
-                    {order.discount_code ? ` (${order.discount_code})` : ""}
-                  </span>
-                  <span>
-                    -{money.format(Number(order.discount_amount) || 0)}
+              <div className="px-5 py-4">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#747569]">
+                  Status pesanan
+                </p>
+                <p className="mt-2.5">
+                  <StatusBadge value={order.order_status} />
+                </p>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#747569]">
+                  Gateway
+                </p>
+                <p className="mt-2.5 text-[12px] font-semibold text-[#2f302a]">
+                  {order.payment_gateway || "—"}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+            <div className="space-y-5">
+              <section className="grid gap-5 sm:grid-cols-2">
+                <div className="admin-card p-5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="admin-icon-tile" data-tone="ink">
+                      <User size={15} strokeWidth={1.7} aria-hidden="true" />
+                    </span>
+                    <h2 className="admin-section-title">Pelanggan</h2>
+                  </div>
+                  <dl className="mt-4">
+                    <InfoRow label="Nama">
+                      {order.customer_name || "-"}
+                    </InfoRow>
+                    <InfoRow label="Email">
+                      <span className="break-all">
+                        {order.customer_email || "-"}
+                      </span>
+                    </InfoRow>
+                    <InfoRow label="Telepon">
+                      {order.customer_phone || "-"}
+                    </InfoRow>
+                    <InfoRow label="Catatan">
+                      {order.customer_notes || "-"}
+                    </InfoRow>
+                  </dl>
+                </div>
+
+                <div className="admin-card p-5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="admin-icon-tile" data-tone="sage">
+                      <MapPin size={15} strokeWidth={1.7} aria-hidden="true" />
+                    </span>
+                    <h2 className="admin-section-title">Pengiriman</h2>
+                  </div>
+                  <dl className="mt-4">
+                    <InfoRow label="Alamat">
+                      {order.shipping_address || "-"}
+                    </InfoRow>
+                    <InfoRow label="Kota / Provinsi">
+                      {[order.shipping_city, order.shipping_province]
+                        .filter(Boolean)
+                        .join(", ") || "-"}
+                    </InfoRow>
+                    <InfoRow label="Kode pos">
+                      {order.shipping_postal_code || "-"}
+                    </InfoRow>
+                    <InfoRow label="Dibayar pada">
+                      {order.paid_at ? formatDate(order.paid_at) : "-"}
+                    </InfoRow>
+                  </dl>
+                </div>
+              </section>
+
+              <section className="admin-card admin-card--flush">
+                <div className="flex items-center justify-between gap-3 border-b border-[#eee9de] px-5 py-4">
+                  <div className="flex items-center gap-2.5">
+                    <span className="admin-icon-tile" data-tone="brass">
+                      <Package size={15} strokeWidth={1.7} aria-hidden="true" />
+                    </span>
+                    <h2 className="admin-section-title">Item pesanan</h2>
+                  </div>
+                  <span className="admin-chip" data-tone="neutral">
+                    {order.order_items?.length ?? 0} item
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between gap-4 border-t border-slate-200 pt-3 text-base font-bold">
-                <span>Total</span>
-                <span>
-                  {money.format(Number(order.total_amount) || 0)}
-                </span>
-              </div>
+
+                <div className="overflow-x-auto">
+                  <table className="admin-table min-w-[520px]">
+                    <thead>
+                      <tr>
+                        <th>Produk</th>
+                        <th>Ukuran</th>
+                        <th className="text-right">Harga</th>
+                        <th className="text-right">Qty</th>
+                        <th className="text-right">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {order.order_items?.length ? (
+                        order.order_items.map((item) => (
+                          <tr key={item.id}>
+                            <td className="font-medium text-[#2f302a]">
+                              {item.product_name}
+                            </td>
+                            <td>
+                              {item.size ? (
+                                <span className="inline-flex min-w-7 items-center justify-center rounded-md border border-[#e4dfd2] bg-[#faf7f0] px-1.5 py-0.5 font-mono text-[10px] text-[#6b6c61]">
+                                  {item.size}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="text-right text-[11.5px] text-[#6b6c61]">
+                              {money.format(Number(item.unit_price) || 0)}
+                            </td>
+                            <td className="text-right font-mono text-[11px] text-[#6b6c61]">
+                              {item.quantity}
+                            </td>
+                            <td className="text-right font-semibold text-[#2f302a]">
+                              {money.format(Number(item.line_total) || 0)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="px-5 py-8 text-center text-[#6f7064]"
+                          >
+                            Tidak ada item pesanan.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="border-t border-[#eee9de] bg-[#fdfbf6] px-5 py-4">
+                  <div className="ml-auto max-w-sm space-y-2 text-[11.5px]">
+                    <div className="flex justify-between gap-4 text-[#6b6c61]">
+                      <span>Subtotal produk</span>
+                      <span className="font-mono">
+                        {money.format(Number(order.subtotal) || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-[#6b6c61]">
+                      <span>Ongkos kirim</span>
+                      <span className="font-mono">
+                        {money.format(Number(order.shipping_cost) || 0)}
+                      </span>
+                    </div>
+                    {Number(order.discount_amount) > 0 && (
+                      <div className="flex justify-between gap-4 text-[#4b5741]">
+                        <span>
+                          Diskon
+                          {order.discount_code
+                            ? ` (${order.discount_code})`
+                            : ""}
+                        </span>
+                        <span className="font-mono">
+                          -{money.format(Number(order.discount_amount) || 0)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between gap-4 border-t border-[#e4dfd2] pt-2.5 text-[13px] font-semibold text-[#171814]">
+                      <span>Total</span>
+                      <span className="font-mono">
+                        {money.format(Number(order.total_amount) || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="space-y-5">
+              <section className="admin-card p-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="admin-icon-tile" data-tone="clay">
+                    <ShieldCheck
+                      size={15}
+                      strokeWidth={1.7}
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <div>
+                    <h2 className="admin-section-title">Status pesanan</h2>
+                    <p className="mt-0.5 text-[10.5px] text-[#76776b]">
+                      {formatStatus(order.order_status)}
+                    </p>
+                  </div>
+                </div>
+
+                <OrderStatusForm
+                  key={order.id}
+                  order={order}
+                  updateStatus={updateStatus}
+                />
+              </section>
+
+              <section className="admin-card p-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="admin-icon-tile" data-tone="brass">
+                    <CreditCard
+                      size={15}
+                      strokeWidth={1.7}
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <h2 className="admin-section-title">Pembayaran</h2>
+                </div>
+                <dl className="mt-4">
+                  <InfoRow label="Gateway">
+                    {order.payment_gateway || "-"}
+                  </InfoRow>
+                  <InfoRow label="Status pembayaran">
+                    <StatusBadge value={order.payment_status} />
+                  </InfoRow>
+                  <InfoRow label="Tanggal pesanan">
+                    {formatDate(order.created_at)}
+                  </InfoRow>
+                  <InfoRow label="Dibayar pada">
+                    {order.paid_at ? formatDate(order.paid_at) : "-"}
+                  </InfoRow>
+                </dl>
+              </section>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      )}
     </main>
   );
 }
