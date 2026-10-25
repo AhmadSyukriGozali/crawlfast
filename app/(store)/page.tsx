@@ -205,10 +205,10 @@ export default async function HomePage() {
                 sizes="(max-width: 1023px) 100vw, 46vw"
                 className="hero-frame__img h-[380px] w-full object-cover sm:h-[540px] lg:h-[620px]"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/10 to-black/35" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/25 to-black/45" />
 
               <div className="absolute inset-x-5 top-5 text-white sm:inset-x-7 sm:top-7">
-                <p className="text-[9px] uppercase tracking-[0.2em] text-white/75 [text-shadow:0_1px_12px_rgba(0,0,0,0.45)]">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-white/90 [text-shadow:0_1px_12px_rgba(0,0,0,0.45)]">
                   The new edit
                 </p>
                 <p className="mt-1 text-xl tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.5)] sm:text-2xl">

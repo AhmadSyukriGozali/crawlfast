@@ -1,10 +1,49 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, LoaderCircle, LockKeyhole } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+
+/**
+ * Menukar code recovery menjadi session. Hanya berhasil jika halaman dibuka
+ * dari tautan email; sesi login biasa tidak dianggap sebagai bukti recovery.
+ */
+async function prepareRecoverySession(): Promise<boolean> {
+  // Baca code sebelum client dibuat. `detectSessionInUrl` otomatis menukar
+  // dan menghapus ?code saat client diinisialisasi.
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  const flowId = params.get("sb_flow_id");
+
+  if (!code) return false;
+
+  // Bersihkan URL lebih dulu agar code tidak ditukar dua kali.
+  params.delete("code");
+  params.delete("sb_flow_id");
+  const query = params.toString();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+  );
+
+  try {
+    const supabase = createBrowserSupabaseClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(
+      code,
+      flowId ? { flowId } : undefined,
+    );
+
+    if (error) return false;
+
+    const { data } = await supabase.auth.getSession();
+    return Boolean(data.session);
+  } catch {
+    return false;
+  }
+}
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -15,36 +54,23 @@ export default function ResetPasswordForm() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const recoveryAttempt = useRef<Promise<boolean> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function prepareSession() {
-      try {
-        const supabase = createBrowserSupabaseClient();
-        const code = new URLSearchParams(window.location.search).get("code");
-
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-          if (error) {
-            const { data } = await supabase.auth.getSession();
-            if (!data.session) throw error;
-          }
-        }
-
-        const { data } = await supabase.auth.getSession();
-
-        if (!cancelled) {
-          if (data.session) setReady(true);
-          else setInvalid(true);
-        }
-      } catch {
-        if (!cancelled) setInvalid(true);
-      }
+    // Simpan promise di ref agar React Strict Mode tidak menukar code dua kali.
+    let attempt = recoveryAttempt.current;
+    if (!attempt) {
+      attempt = prepareRecoverySession();
+      recoveryAttempt.current = attempt;
     }
 
-    void prepareSession();
+    void attempt.then((ok) => {
+      if (cancelled) return;
+      if (ok) setReady(true);
+      else setInvalid(true);
+    });
 
     return () => {
       cancelled = true;
@@ -78,7 +104,7 @@ export default function ResetPasswordForm() {
 
       if (error) throw error;
 
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "global" });
       router.replace("/login?reset=success");
     } catch {
       setMessage("Password belum dapat diperbarui. Minta tautan baru lalu coba lagi.");

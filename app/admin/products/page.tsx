@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useAdminProducts } from "@/features/products/hooks/useAdminProducts";
 import { formatRupiah } from "@/lib/format";
 
@@ -31,6 +32,10 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -53,18 +58,13 @@ export default function AdminProductsPage() {
   const activeCount = products.filter((product) => product.isActive).length;
   const featuredCount = products.filter((product) => product.featured).length;
 
-  async function handleDelete(id: number, name: string) {
-    if (
-      !window.confirm(
-        `Hapus produk "${name}"? Produk akan hilang dari storefront. Riwayat pesanan lama tetap tersimpan.`,
-      )
-    ) {
-      return;
-    }
+  async function confirmDelete() {
+    if (!pendingDelete) return;
 
-    setDeletingId(id);
-    await deleteProduct(id);
+    setDeletingId(pendingDelete.id);
+    await deleteProduct(pendingDelete.id);
     setDeletingId(null);
+    setPendingDelete(null);
   }
 
   const stats = [
@@ -92,7 +92,7 @@ export default function AdminProductsPage() {
   ];
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={email}
         loading={loading}
@@ -224,7 +224,7 @@ export default function AdminProductsPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#8b8c80]">
+              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#6f7064]">
                 <Boxes size={20} strokeWidth={1.5} aria-hidden="true" />
               </span>
               <p className="mt-4 text-sm font-semibold text-[#3c3d34]">
@@ -244,14 +244,17 @@ export default function AdminProductsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="admin-table">
+                <caption className="sr-only">Daftar produk</caption>
                 <thead>
                   <tr>
-                    <th>Produk</th>
-                    <th>Kategori</th>
-                    <th>Harga</th>
-                    <th>Status</th>
-                    <th>Featured</th>
-                    <th className="text-right">Aksi</th>
+                    <th scope="col">Produk</th>
+                    <th scope="col">Kategori</th>
+                    <th scope="col">Harga</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Featured</th>
+                    <th scope="col" className="text-right">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -291,7 +294,7 @@ export default function AdminProductsPage() {
                           {formatRupiah(product.price)}
                         </p>
                         {product.compareAtPrice && (
-                          <p className="mt-0.5 text-[10px] text-[#b0b0a5] line-through">
+                          <p className="mt-0.5 text-[10px] text-[#76776b] line-through">
                             {formatRupiah(product.compareAtPrice)}
                           </p>
                         )}
@@ -310,7 +313,7 @@ export default function AdminProductsPage() {
                             Ya
                           </span>
                         ) : (
-                          <span className="text-[11px] text-[#b0b0a5]">
+                          <span className="text-[11px] text-[#76776b]">
                             Tidak
                           </span>
                         )}
@@ -346,7 +349,10 @@ export default function AdminProductsPage() {
                             type="button"
                             disabled={deletingId === product.id}
                             onClick={() =>
-                              void handleDelete(product.id, product.name)
+                              setPendingDelete({
+                                id: product.id,
+                                name: product.name,
+                              })
                             }
                             aria-label={`Hapus ${product.name}`}
                             className="admin-btn admin-btn-danger admin-btn-sm"
@@ -376,6 +382,20 @@ export default function AdminProductsPage() {
           · perubahan langsung memengaruhi storefront
         </footer>
       </div>
+
+      <ConfirmDialog
+        variant="admin"
+        open={pendingDelete !== null}
+        title="Hapus produk?"
+        description={
+          pendingDelete
+            ? `Produk "${pendingDelete.name}" akan hilang dari storefront. Riwayat pesanan lama tetap tersimpan.`
+            : ""
+        }
+        busy={deletingId !== null}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }

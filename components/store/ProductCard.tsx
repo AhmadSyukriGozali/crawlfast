@@ -36,7 +36,7 @@ export default function ProductCard({
               alt={product.imageAlt}
               fill
               priority={priority}
-              sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
+              sizes="(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
               className="object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.045]"
             />
           </div>
@@ -72,7 +72,7 @@ export default function ProductCard({
 
         <Link
           href={`/products/${product.slug}`}
-          className="absolute inset-x-3 bottom-3 hidden translate-y-2 items-center justify-between bg-cream/95 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.1em] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:flex"
+          className="absolute inset-x-3 bottom-3 hidden translate-y-2 items-center justify-between bg-cream/95 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.1em] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 sm:flex"
         >
           Lihat produk
           <ArrowUpRight size={14} />

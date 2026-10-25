@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowRight,
   Heart,
@@ -37,6 +37,7 @@ export default function SiteHeader({
   products?: Product[];
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { totalItems } = useCart();
   const { count: wishlistCount } = useWishlist();
 
@@ -46,6 +47,11 @@ export default function SiteHeader({
   const [query, setQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchPanelRef = useRef<HTMLDivElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   // Menu/pencarian otomatis tertutup saat rute berubah tanpa setState di effect.
   const menuVisible = menuOpen && overlayPath === pathname;
@@ -63,33 +69,84 @@ export default function SiteHeader({
   useEffect(() => {
     if (!overlayOpen) return;
 
+    const trigger = searchVisible
+      ? searchButtonRef.current
+      : menuButtonRef.current;
+
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : trigger;
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    const panel = searchVisible
+      ? searchPanelRef.current
+      : menuPanelRef.current;
+    const focusableSelector =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const getFocusable = () =>
+      panel
+        ? Array.from(
+            panel.querySelectorAll<HTMLElement>(focusableSelector),
+          ).filter((element) => element.getClientRects().length > 0)
+        : [];
+
+    const focusTimeout = window.setTimeout(() => {
+      if (searchVisible) {
+        searchInputRef.current?.focus();
+      } else {
+        getFocusable()[0]?.focus();
+      }
+    }, 60);
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMenuOpen(false);
         setSearchOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = getFocusable();
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
+    // Panel menu hanya tampil di bawah lg; jangan tinggalkan scroll terkunci.
+    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const onBreakpointChange = () => {
+      if (desktopQuery.matches) setMenuOpen(false);
+    };
+
     window.addEventListener("keydown", onKeyDown);
+    desktopQuery.addEventListener("change", onBreakpointChange);
 
     return () => {
+      window.clearTimeout(focusTimeout);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [overlayOpen]);
+      desktopQuery.removeEventListener("change", onBreakpointChange);
 
-  useEffect(() => {
-    if (searchVisible) {
-      const timeout = window.setTimeout(
-        () => searchInputRef.current?.focus(),
-        60,
-      );
-      return () => window.clearTimeout(timeout);
-    }
-  }, [searchVisible]);
+      const restore = restoreFocusRef.current;
+      if (restore && document.contains(restore)) {
+        restore.focus({ preventScroll: true });
+      }
+    };
+  }, [overlayOpen, searchVisible]);
 
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -133,9 +190,10 @@ export default function SiteHeader({
         }`}
       >
         <div className="container-page">
-          <div className="grid h-[68px] grid-cols-[1fr_auto_1fr] items-center gap-4 lg:h-[76px]">
+          <div className="flex h-17 items-center justify-between gap-4 lg:grid lg:h-19 lg:grid-cols-[1fr_auto_1fr]">
             <div className="flex items-center gap-2">
               <button
+                ref={menuButtonRef}
                 type="button"
                 aria-label={menuVisible ? "Tutup menu" : "Buka menu"}
                 aria-expanded={menuVisible}
@@ -171,6 +229,7 @@ export default function SiteHeader({
 
             <div className="flex items-center justify-end gap-1 sm:gap-2">
               <button
+                ref={searchButtonRef}
                 type="button"
                 aria-label="Cari produk"
                 aria-expanded={searchVisible}
@@ -218,190 +277,222 @@ export default function SiteHeader({
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Panel pencarian */}
-        {searchVisible && (
-          <div
-            id="search-panel"
-            className={`fixed inset-x-0 bottom-0 z-40 overflow-y-auto bg-cream/98 backdrop-blur-xl ${
-              scrolled
-                ? "top-[68px] lg:top-[76px]"
-                : "top-[104px] lg:top-[112px]"
-            }`}
-          >
-            <div className="container-page py-8 sm:py-12">
-              <div className="mx-auto max-w-3xl">
-                <div className="flex items-center gap-4 border-b border-ink/20 pb-4">
-                  <Search size={22} className="shrink-0 text-sage" />
-                  <input
-                    ref={searchInputRef}
-                    type="search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Cari kaos, outerwear, celana..."
-                    aria-label="Cari produk"
-                    className="w-full bg-transparent text-xl tracking-tight outline-none placeholder:text-ink-muted sm:text-2xl"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setSearchOpen(false)}
-                    aria-label="Tutup pencarian"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line transition-colors hover:bg-sand"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+      {/* Panel pencarian */}
+      {searchVisible && (
+        <div
+          ref={searchPanelRef}
+          id="search-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pencarian produk"
+          className={`fixed inset-x-0 bottom-0 z-40 overflow-y-auto bg-cream/98 backdrop-blur-xl ${
+            scrolled
+              ? "top-17 lg:top-19"
+              : "top-26 lg:top-28"
+          }`}
+        >
+          <div className="container-page py-8 sm:py-12">
+            <div className="mx-auto max-w-3xl">
+              <div className="flex items-center gap-4 border-b border-ink/20 pb-4">
+                <Search size={22} className="shrink-0 text-sage" />
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
 
-                <div className="mt-8">
-                  {query.trim() === "" ? (
-                    <div>
-                      <p className="eyebrow">Pencarian populer</p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {["Boxy Tee", "Overshirt", "Trousers", "Knitwear"].map(
-                          (term) => (
-                            <button
-                              key={term}
-                              type="button"
-                              onClick={() => setQuery(term)}
-                              className="border border-line px-4 py-2 text-xs transition-colors hover:border-ink hover:bg-ink hover:text-white"
-                            >
-                              {term}
-                            </button>
-                          ),
-                        )}
-                      </div>
+                    const term = query.trim();
+                    if (!term) return;
+
+                    event.preventDefault();
+                    setSearchOpen(false);
+                    router.push(`/products?q=${encodeURIComponent(term)}`);
+                  }}
+                  enterKeyHint="search"
+                  placeholder="Cari kaos, outerwear, celana..."
+                  aria-label="Cari produk"
+                  className="w-full bg-transparent text-xl tracking-tight placeholder:text-ink-muted sm:text-2xl"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSearchOpen(false)}
+                  aria-label="Tutup pencarian"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line transition-colors hover:bg-sand"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="mt-8">
+                {query.trim() === "" ? (
+                  <div>
+                    <p className="eyebrow">Pencarian populer</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {["Boxy Tee", "Overshirt", "Trousers", "Knitwear"].map(
+                        (term) => (
+                          <button
+                            key={term}
+                            type="button"
+                            onClick={() => setQuery(term)}
+                            className="border border-line px-4 py-2 text-xs transition-colors hover:border-ink hover:bg-ink hover:text-white"
+                          >
+                            {term}
+                          </button>
+                        ),
+                      )}
                     </div>
-                  ) : results.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-ink-soft">
-                      Tidak ada produk yang cocok dengan &ldquo;{query}&rdquo;.
+                  </div>
+                ) : results.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-ink-soft">
+                    Tidak ada produk yang cocok dengan &ldquo;{query}&rdquo;.
+                  </p>
+                ) : (
+                  <div>
+                    <p className="eyebrow">
+                      {results.length} hasil untuk &ldquo;{query}&rdquo;
                     </p>
-                  ) : (
-                    <div>
-                      <p className="eyebrow">
-                        {results.length} hasil untuk &ldquo;{query}&rdquo;
-                      </p>
-                      <ul className="mt-4 divide-y divide-line border-y border-line">
-                        {results.map((product) => (
-                          <li key={product.id}>
-                            <Link
-                              href={`/products/${product.slug}`}
-                              onClick={() => setSearchOpen(false)}
-                              className="group flex items-center gap-4 py-4"
-                            >
-                              <div className="relative h-20 w-16 shrink-0 overflow-hidden bg-sand">
-                                <Image
-                                  src={product.image}
-                                  alt={product.imageAlt}
-                                  fill
-                                  sizes="64px"
-                                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-[10px] uppercase tracking-[0.14em] text-ink-muted">
-                                  {product.category}
-                                </p>
-                                <p className="mt-1 truncate text-sm font-medium">
-                                  {product.name}
-                                </p>
-                                <p className="mt-1 text-xs font-semibold">
-                                  {formatRupiah(product.price)}
-                                </p>
-                              </div>
-                              <ArrowRight
-                                size={17}
-                                className="shrink-0 text-ink-muted transition-transform group-hover:translate-x-1 group-hover:text-ink"
+                    <ul className="mt-4 divide-y divide-line border-y border-line">
+                      {results.map((product) => (
+                        <li key={product.id}>
+                          <Link
+                            href={`/products/${product.slug}`}
+                            onClick={() => setSearchOpen(false)}
+                            className="group flex items-center gap-4 py-4"
+                          >
+                            <div className="relative h-20 w-16 shrink-0 overflow-hidden bg-sand">
+                              <Image
+                                src={product.image}
+                                alt={product.imageAlt}
+                                fill
+                                sizes="64px"
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
                               />
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-ink-muted">
+                                {product.category}
+                              </p>
+                              <p className="mt-1 truncate text-sm font-medium">
+                                {product.name}
+                              </p>
+                              <p className="mt-1 text-xs font-semibold">
+                                {formatRupiah(product.price)}
+                              </p>
+                            </div>
+                            <ArrowRight
+                              size={17}
+                              className="shrink-0 text-ink-muted transition-transform group-hover:translate-x-1 group-hover:text-ink"
+                            />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
 
-                      <Link
-                        href={`/products?q=${encodeURIComponent(query.trim())}`}
-                        onClick={() => setSearchOpen(false)}
-                        className="mt-6 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-sage hover:text-ink"
-                      >
-                        Lihat semua hasil
-                        <ArrowRight size={14} />
-                      </Link>
-                    </div>
-                  )}
-                </div>
+                    <Link
+                      href={`/products?q=${encodeURIComponent(query.trim())}`}
+                      onClick={() => setSearchOpen(false)}
+                      className="mt-6 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-sage hover:text-ink"
+                    >
+                      Lihat semua hasil
+                      <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Menu mobile */}
-        {menuVisible && (
-          <div
-            id="mobile-menu"
-            className={`fixed inset-x-0 bottom-0 z-40 overflow-y-auto bg-cream lg:hidden ${
-              scrolled ? "top-[68px]" : "top-[104px]"
-            }`}
-          >
-            <nav
-              aria-label="Navigasi mobile"
-              className="container-page flex min-h-full flex-col py-8"
-            >
-              <div className="flex flex-col">
-                {STORE_NAV.map((item, index) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center justify-between border-b border-line py-5 text-2xl tracking-tight text-ink"
-                  >
-                    <span>
-                      <span className="mr-3 align-middle text-[10px] font-semibold text-sage">
-                        0{index + 1}
-                      </span>
-                      {item.label}
-                    </span>
-                    <ArrowRight size={18} className="text-ink-muted" />
-                  </Link>
-                ))}
-              </div>
+      {/* Backdrop menu mobile */}
+      <div
+        aria-hidden="true"
+        onClick={() => setMenuOpen(false)}
+        className={`fixed inset-0 z-30 bg-ink/25 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
+          menuVisible ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
 
-              <div className="mt-8 grid grid-cols-2 gap-3 text-[11px] font-semibold uppercase tracking-[0.12em]">
-                <Link
-                  href="/wishlist"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex min-h-12 items-center justify-center border border-line"
-                >
-                  Wishlist ({wishlistCount})
-                </Link>
-                <Link
-                  href="/track"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex min-h-12 items-center justify-center border border-line"
-                >
-                  Lacak pesanan
-                </Link>
-                <Link
-                  href="/account"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex min-h-12 items-center justify-center border border-line"
-                >
-                  Akun saya
-                </Link>
-                <Link
-                  href="/cart"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex min-h-12 items-center justify-center bg-ink text-white"
-                >
-                  Keranjang ({totalItems})
-                </Link>
-              </div>
-
-              <p className="mt-auto pt-10 text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                CRAWLFAST · {FREE_SHIPPING_THRESHOLD / 1000}K+ GRATIS ONGKIR
-              </p>
-            </nav>
+      {/* Menu mobile — selalu ter-mount agar bisa animasi keluar. */}
+      <div
+        ref={menuPanelRef}
+        id="mobile-menu"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu navigasi"
+        aria-hidden={!menuVisible}
+        inert={!menuVisible}
+        className={`fixed inset-x-0 z-40 h-[50dvh] overflow-y-auto border-b border-line bg-cream shadow-[0_24px_60px_-40px_rgba(29,30,26,0.45)] transition-[translate,opacity] duration-300 ease-out-soft lg:hidden ${
+          scrolled ? "top-17" : "top-26"
+        } ${
+          menuVisible
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-full opacity-0"
+        }`}
+      >
+        <nav
+          aria-label="Navigasi mobile"
+          className="container-page flex min-h-full flex-col py-6"
+        >
+          <div className="flex flex-col">
+            {STORE_NAV.map((item, index) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-between border-b border-line py-4 text-2xl tracking-tight text-ink"
+              >
+                <span>
+                  <span className="mr-3 align-middle text-[10px] font-semibold text-sage">
+                    0{index + 1}
+                  </span>
+                  {item.label}
+                </span>
+                <ArrowRight size={18} className="text-ink-muted" />
+              </Link>
+            ))}
           </div>
-        )}
-      </header>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 text-[11px] font-semibold uppercase tracking-[0.12em]">
+            <Link
+              href="/wishlist"
+              onClick={() => setMenuOpen(false)}
+              className="flex min-h-12 items-center justify-center border border-line"
+            >
+              Wishlist ({wishlistCount})
+            </Link>
+            <Link
+              href="/track"
+              onClick={() => setMenuOpen(false)}
+              className="flex min-h-12 items-center justify-center border border-line"
+            >
+              Lacak pesanan
+            </Link>
+            <Link
+              href="/account"
+              onClick={() => setMenuOpen(false)}
+              className="flex min-h-12 items-center justify-center border border-line"
+            >
+              Akun saya
+            </Link>
+            <Link
+              href="/cart"
+              onClick={() => setMenuOpen(false)}
+              className="flex min-h-12 items-center justify-center bg-ink text-white"
+            >
+              Keranjang ({totalItems})
+            </Link>
+          </div>
+
+          <p className="mt-auto pt-10 text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+            CRAWLFAST · {FREE_SHIPPING_THRESHOLD / 1000}K+ GRATIS ONGKIR
+          </p>
+        </nav>
+      </div>
     </>
   );
 }

@@ -67,7 +67,7 @@ export default function MetricCard({
       />
 
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8b8c80]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6f7064]">
           {title}
         </p>
         <span className="admin-icon-tile" data-tone={style.tile}>

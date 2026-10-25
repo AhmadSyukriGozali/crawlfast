@@ -21,7 +21,7 @@ export default function OrdersTable({ orders }: Props) {
   if (orders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#8b8c80]">
+        <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#6f7064]">
           <Inbox size={20} strokeWidth={1.5} aria-hidden="true" />
         </span>
         <p className="mt-4 text-sm font-semibold text-[#3c3d34]">
@@ -37,15 +37,16 @@ export default function OrdersTable({ orders }: Props) {
   return (
     <div className="overflow-x-auto">
       <table className="admin-table">
+        <caption className="sr-only">Daftar pesanan</caption>
         <thead>
           <tr>
-            <th>Pesanan</th>
-            <th>Pelanggan</th>
-            <th>Total</th>
-            <th>Pembayaran</th>
-            <th>Status</th>
-            <th>Tanggal</th>
-            <th aria-label="Aksi" />
+            <th scope="col">Pesanan</th>
+            <th scope="col">Pelanggan</th>
+            <th scope="col">Total</th>
+            <th scope="col">Pembayaran</th>
+            <th scope="col">Status</th>
+            <th scope="col">Tanggal</th>
+            <th scope="col" aria-label="Aksi" />
           </tr>
         </thead>
 

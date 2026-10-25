@@ -86,7 +86,7 @@ function BrandMark() {
           CRAWLFAST
           <span className="text-[#c9a86a]">.</span>
         </span>
-        <span className="mt-1.5 block text-[9px] font-semibold uppercase tracking-[0.24em] text-white/35">
+        <span className="mt-1.5 block text-[9px] font-semibold uppercase tracking-[0.24em] text-white/55">
           Atelier Console
         </span>
       </span>
@@ -111,7 +111,7 @@ function AccountBlock({
           <span className="block truncate text-[11px] font-semibold text-white/85">
             {email || "Administrator"}
           </span>
-          <span className="mt-0.5 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-white/30">
+          <span className="mt-0.5 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-white/55">
             <span className="h-1 w-1 rounded-full bg-[#8fae7f]" />
             Sesi aktif
           </span>
@@ -223,7 +223,7 @@ export default function AdminHeader({
             onLogout={onLogout}
           />
 
-          <p className="text-center text-[9px] uppercase tracking-[0.2em] text-white/20">
+          <p className="text-center text-[9px] uppercase tracking-[0.2em] text-white/50">
             CRAWLFAST · Internal
           </p>
         </div>

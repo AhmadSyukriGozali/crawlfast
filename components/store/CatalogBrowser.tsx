@@ -40,6 +40,57 @@ export default function CatalogBrowser({
   const [query, setQuery] = useState(initialQuery.slice(0, 80));
   const [sort, setSort] = useState<SortOption>(safeSort);
 
+  /**
+   * Filter tetap responsif saat mengetik, tetapi URL baru diperbarui saat
+   * pencarian dikomit (Enter/blur) agar input tidak remount tiap ketukan.
+   */
+  function syncUrl(next: {
+    category: string | null;
+    query: string;
+    sort: SortOption;
+  }) {
+    const params = new URLSearchParams(window.location.search);
+
+    if (next.category) params.set("category", next.category);
+    else params.delete("category");
+
+    if (next.query.trim()) params.set("q", next.query);
+    else params.delete("q");
+
+    if (next.sort !== "featured") params.set("sort", next.sort);
+    else params.delete("sort");
+
+    const search = params.toString();
+
+    window.history.replaceState(
+      null,
+      "",
+      search
+        ? `${window.location.pathname}?${search}`
+        : window.location.pathname,
+    );
+  }
+
+  function selectCategory(next: string | null) {
+    setCategory(next);
+    syncUrl({ category: next, query, sort });
+  }
+
+  function commitQuery() {
+    syncUrl({ category, query, sort });
+  }
+
+  function changeSort(next: SortOption) {
+    setSort(next);
+    syncUrl({ category, query, sort: next });
+  }
+
+  function resetFilters() {
+    setQuery("");
+    setCategory(null);
+    syncUrl({ category: null, query: "", sort });
+  }
+
   const filteredProducts = useMemo(() => {
     const term = query.trim().toLowerCase();
 
@@ -79,7 +130,7 @@ export default function CatalogBrowser({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setCategory(null)}
+              onClick={() => selectCategory(null)}
               aria-pressed={category === null}
               className={`shrink-0 border px-4 py-2.5 text-[10px] font-medium uppercase tracking-[0.08em] transition-colors ${
                 category === null
@@ -94,7 +145,7 @@ export default function CatalogBrowser({
               <button
                 key={item}
                 type="button"
-                onClick={() => setCategory(item)}
+                onClick={() => selectCategory(item)}
                 aria-pressed={category === item}
                 className={`shrink-0 border px-4 py-2.5 text-[10px] font-medium uppercase tracking-[0.08em] transition-colors ${
                   category === item
@@ -114,6 +165,13 @@ export default function CatalogBrowser({
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onBlur={commitQuery}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    commitQuery();
+                  }
+                }}
                 placeholder="Cari produk..."
                 maxLength={80}
                 className="field min-h-10 w-full py-2 sm:w-56"
@@ -128,7 +186,9 @@ export default function CatalogBrowser({
               <span className="sr-only">Urutkan produk</span>
               <select
                 value={sort}
-                onChange={(event) => setSort(event.target.value as SortOption)}
+                onChange={(event) =>
+                  changeSort(event.target.value as SortOption)
+                }
                 className="field min-h-10 w-full py-2 pl-9 sm:w-44"
               >
                 {SORT_OPTIONS.map((option) => (
@@ -150,10 +210,7 @@ export default function CatalogBrowser({
         {activeFilters > 0 && (
           <button
             type="button"
-            onClick={() => {
-              setQuery("");
-              setCategory(null);
-            }}
+            onClick={resetFilters}
             className="text-sage underline underline-offset-4 hover:text-ink"
           >
             Reset filter
@@ -180,10 +237,7 @@ export default function CatalogBrowser({
           </p>
           <button
             type="button"
-            onClick={() => {
-              setQuery("");
-              setCategory(null);
-            }}
+            onClick={resetFilters}
             className="btn btn-secondary mt-6"
           >
             Reset filter

@@ -149,7 +149,7 @@ export default function AdminPage() {
     : Math.min(page * pageSize, totalCount);
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={email}
         loading={loading}

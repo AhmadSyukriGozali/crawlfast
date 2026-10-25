@@ -182,7 +182,7 @@ export default function CategoryForm({ categoryId }: Props) {
   const displayError = session.error || categoryError;
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={session.email}
         loading={loading}

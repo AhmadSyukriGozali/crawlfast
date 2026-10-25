@@ -1,12 +1,12 @@
 export default function AdminLoading() {
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <aside className="admin-sidebar" aria-hidden="true">
         <div className="px-5 pb-6 pt-6">
           <span className="text-[17px] font-bold leading-none tracking-[-0.055em] text-white">
             CRAWLFAST<span className="text-[#c9a86a]">.</span>
           </span>
-          <span className="mt-2 block text-[9px] font-semibold uppercase tracking-[0.24em] text-white/30">
+          <span className="mt-2 block text-[9px] font-semibold uppercase tracking-[0.24em] text-white/50">
             Atelier Console
           </span>
         </div>

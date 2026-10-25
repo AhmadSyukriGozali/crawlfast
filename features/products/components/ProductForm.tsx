@@ -398,7 +398,7 @@ export default function ProductForm({ productId }: Props) {
   const previewImage = isPreviewableImage(form.image) ? form.image : "";
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={session.email}
         loading={loading}

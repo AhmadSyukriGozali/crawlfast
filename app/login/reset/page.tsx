@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
 
         <Link
           href="/login"
-          className="mt-6 inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.1em] text-ink-muted hover:text-ink"
+          className="mt-6 inline-flex items-center gap-2 text-[10px] uppercase tracking-widest text-ink-muted hover:text-ink"
         >
           Kembali ke login
         </Link>

@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
-/* stylelint-disable at-rule-no-unknown -- @theme is a valid Tailwind CSS v4 directive. */
+/* stylelint-disable at-rule-no-unknown -- Tailwind CSS v4 uses @theme, which is valid. */
 @theme {
   --color-cream: #f6f4ef;
   --color-cream-deep: #ece8df;
   --color-ink: #1d1e1a;
   --color-ink-soft: #5d5f56;
-  --color-ink-muted: #86877d;
+  /* #6b6d63 menjaga kontras >= 4.5:1 di atas cream maupun sand. */
+  --color-ink-muted: #6b6d63;
   --color-sage: #5b6650;
   --color-sage-soft: #dfe3d6;
   --color-sage-light: #aab19a;
@@ -35,7 +36,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 96px;
+  scroll-padding-top: 112px;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -1152,7 +1153,7 @@ html[data-intro="off"] .intro {
 
 .admin-input::placeholder,
 .admin-textarea::placeholder {
-  color: #a3a396;
+  color: #76776b;
 }
 
 .admin-input:hover,
@@ -1182,7 +1183,7 @@ html[data-intro="off"] .intro {
   margin-top: 0.4rem;
   font-size: 0.6875rem;
   line-height: 1.5;
-  color: #96968a;
+  color: #76776b;
 }
 
 .admin-check {
@@ -1257,7 +1258,7 @@ input:focus-visible + .admin-switch {
   font-weight: 650;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #9a9a8e;
+  color: #6f7064;
 }
 
 .admin-step::before {
@@ -1469,7 +1470,7 @@ input:focus-visible + .admin-switch {
   font-weight: 650;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: #87887c;
+  color: #6f7064;
   white-space: nowrap;
 }
 
@@ -1499,7 +1500,7 @@ input:focus-visible + .admin-switch {
   font-weight: 650;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgb(255 255 255 / 0.28);
+  color: rgb(255 255 255 / 0.5);
 }
 
 .admin-account {
@@ -1633,4 +1634,87 @@ input:focus-visible + .admin-switch {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ==========================================================================
+   Confirm dialog — dipakai storefront dan admin console.
+   ========================================================================== */
+
+.confirm-dialog {
+  width: min(29rem, calc(100vw - 2rem));
+  margin: auto;
+  border: 1px solid var(--color-line);
+  background: var(--color-cream);
+  color: var(--ink);
+  padding: 1.5rem;
+  box-shadow: 0 32px 80px -40px rgb(23 24 20 / 0.55);
+}
+
+.confirm-dialog[data-variant="admin"] {
+  border-color: var(--admin-line);
+  border-radius: 1rem;
+  background: var(--admin-card);
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(23 24 20 / 0.5);
+  backdrop-filter: blur(3px);
+}
+
+.confirm-dialog[open] {
+  animation: fade-up 240ms var(--ease-out-soft) both;
+}
+
+.confirm-dialog__icon {
+  display: grid;
+  place-items: center;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgb(169 95 61 / 0.12);
+  color: #8f4a2c;
+}
+
+.confirm-dialog__cancel,
+.confirm-dialog__confirm {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 1.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.confirm-dialog__cancel {
+  border: 1px solid var(--color-line);
+  color: var(--ink);
+  background: transparent;
+}
+
+.confirm-dialog__cancel:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: rgb(29 30 26 / 0.04);
+}
+
+.confirm-dialog__confirm {
+  background: var(--color-clay);
+  color: #fff;
+}
+
+.confirm-dialog__confirm:hover:not(:disabled) {
+  background: #8f4a2c;
+}
+
+.confirm-dialog__cancel:disabled,
+.confirm-dialog__confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -12,6 +12,7 @@ import {
   Zap,
 } from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useAdminDiscounts } from "@/features/discounts/hooks/useAdminDiscounts";
 import type { AdminDiscount } from "@/features/discounts/types";
 import {
@@ -74,6 +75,9 @@ export default function AdminDiscountsPage() {
   } = useAdminDiscounts();
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AdminDiscount | null>(
+    null,
+  );
 
   const activeCount = discounts.filter(
     (discount) => getStatus(discount).label === "Aktif",
@@ -84,18 +88,13 @@ export default function AdminDiscountsPage() {
     0,
   );
 
-  async function handleDelete(discount: AdminDiscount) {
-    if (
-      !window.confirm(
-        `Hapus kode diskon "${discount.code}"? Pelanggan tidak bisa memakainya lagi setelah dihapus.`,
-      )
-    ) {
-      return;
-    }
+  async function confirmDelete() {
+    if (!pendingDelete) return;
 
-    setDeletingId(discount.id);
-    await deleteDiscount(discount.id);
+    setDeletingId(pendingDelete.id);
+    await deleteDiscount(pendingDelete.id);
     setDeletingId(null);
+    setPendingDelete(null);
   }
 
   const stats = [
@@ -123,7 +122,7 @@ export default function AdminDiscountsPage() {
   ];
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={email}
         loading={loading}
@@ -227,7 +226,7 @@ export default function AdminDiscountsPage() {
             </div>
           ) : discounts.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#8b8c80]">
+              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#6f7064]">
                 <TicketPercent size={20} strokeWidth={1.5} aria-hidden="true" />
               </span>
               <p className="mt-4 text-sm font-semibold text-[#3c3d34]">
@@ -248,15 +247,18 @@ export default function AdminDiscountsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="admin-table">
+                <caption className="sr-only">Daftar kode diskon</caption>
                 <thead>
                   <tr>
-                    <th>Kode</th>
-                    <th>Potongan</th>
-                    <th>Min. belanja</th>
-                    <th>Periode</th>
-                    <th>Pemakaian</th>
-                    <th>Status</th>
-                    <th className="text-right">Aksi</th>
+                    <th scope="col">Kode</th>
+                    <th scope="col">Potongan</th>
+                    <th scope="col">Min. belanja</th>
+                    <th scope="col">Periode</th>
+                    <th scope="col">Pemakaian</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" className="text-right">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -303,7 +305,7 @@ export default function AdminDiscountsPage() {
                         <td>
                           <p className="font-mono text-[11px] text-[#56584d]">
                             {discount.usedCount}
-                            <span className="text-[#b0b0a5]">
+                            <span className="text-[#76776b]">
                               {discount.usageLimit
                                 ? ` / ${discount.usageLimit}`
                                 : " / ∞"}
@@ -339,7 +341,7 @@ export default function AdminDiscountsPage() {
                             <button
                               type="button"
                               disabled={deletingId === discount.id}
-                              onClick={() => void handleDelete(discount)}
+                              onClick={() => setPendingDelete(discount)}
                               className="admin-btn admin-btn-danger admin-btn-sm"
                             >
                               <Trash2
@@ -365,6 +367,20 @@ export default function AdminDiscountsPage() {
           setelah pesanan berhasil dibuat
         </footer>
       </div>
+
+      <ConfirmDialog
+        variant="admin"
+        open={pendingDelete !== null}
+        title="Hapus kode diskon?"
+        description={
+          pendingDelete
+            ? `Kode "${pendingDelete.code}" akan dihapus dan tidak bisa dipakai lagi oleh pelanggan.`
+            : ""
+        }
+        busy={deletingId !== null}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }

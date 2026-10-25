@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -49,12 +49,23 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [message, setMessage] = useState(
     resetSuccess ? "Password berhasil diperbarui. Silakan login kembali." : "",
   );
   const [messageType, setMessageType] = useState<"error" | "success">(
     resetSuccess ? "success" : "error",
   );
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+
+    const timeout = window.setTimeout(() => {
+      setCooldown((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [cooldown]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,12 +81,39 @@ export default function LoginForm() {
 
     try {
       const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
       if (error) throw error;
+
+      // Cek allowlist sebelum menampilkan shell admin. Best-effort: gangguan
+      // jaringan tidak boleh memblokir login yang kredensialnya valid.
+      const accessToken = data.session?.access_token;
+
+      if (accessToken) {
+        try {
+          const response = await fetch("/api/admin/me", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            cache: "no-store",
+          });
+
+          if (response.status === 403) {
+            const result = (await response.json().catch(() => null)) as {
+              error?: string;
+            } | null;
+
+            await supabase.auth.signOut();
+            setMessageType("error");
+            setMessage(result?.error ?? "Akun ini tidak memiliki akses admin.");
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Lanjut; setiap API admin tetap memverifikasi token dan allowlist.
+        }
+      }
 
       router.replace("/admin");
       router.refresh();
@@ -92,6 +130,8 @@ export default function LoginForm() {
 
   async function handleForgotPassword() {
     setMessage("");
+
+    if (resetting || cooldown > 0) return;
 
     if (!email.trim()) {
       setMessageType("error");
@@ -114,11 +154,27 @@ export default function LoginForm() {
 
       setMessageType("success");
       setMessage(
-        "Jika email terdaftar, tautan reset password sudah dikirim. Periksa inbox dan folder spam.",
+        "Jika email terdaftar, tautan reset password sudah dikirim. Periksa inbox dan folder spam. Jika kamu tidak meminta reset, abaikan email ini.",
       );
-    } catch {
-      setMessageType("error");
-      setMessage("Tautan reset belum dapat dikirim. Coba lagi nanti.");
+      setCooldown(60);
+    } catch (error) {
+      const normalized =
+        error instanceof Error ? error.message.toLowerCase() : "";
+
+      if (
+        normalized.includes("rate limit") ||
+        normalized.includes("too many") ||
+        normalized.includes("security purposes")
+      ) {
+        setCooldown(60);
+        setMessageType("error");
+        setMessage(
+          "Terlalu banyak permintaan reset. Tunggu sebentar lalu coba lagi.",
+        );
+      } else {
+        setMessageType("error");
+        setMessage("Tautan reset belum dapat dikirim. Coba lagi nanti.");
+      }
     } finally {
       setResetting(false);
     }
@@ -135,7 +191,7 @@ export default function LoginForm() {
             size={15}
             strokeWidth={1.7}
             aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#96968a]"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#76776b]"
           />
           <input
             id="email"
@@ -159,10 +215,14 @@ export default function LoginForm() {
           <button
             type="button"
             onClick={() => void handleForgotPassword()}
-            disabled={resetting}
+            disabled={resetting || cooldown > 0}
             className="-mt-1 text-[10px] font-semibold text-[#8a6a3a] underline decoration-[#b08d57]/35 underline-offset-4 transition hover:text-[#171814] disabled:opacity-50"
           >
-            {resetting ? "Mengirim..." : "Lupa password?"}
+            {resetting
+              ? "Mengirim..."
+              : cooldown > 0
+                ? `Kirim ulang (${cooldown}s)`
+                : "Lupa password?"}
           </button>
         </div>
 
@@ -171,7 +231,7 @@ export default function LoginForm() {
             size={15}
             strokeWidth={1.7}
             aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#96968a]"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#76776b]"
           />
           <input
             id="password"

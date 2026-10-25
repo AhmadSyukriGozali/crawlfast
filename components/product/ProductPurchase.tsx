@@ -65,9 +65,10 @@ export default function ProductPurchase({ product }: { product: Product }) {
         </div>
 
         <div
-          className={`mt-3 grid gap-2 ${
-            product.sizes.length === 1 ? "grid-cols-1" : "grid-cols-4"
-          }`}
+          className="mt-3 grid gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(product.sizes.length, 1)}, minmax(0, 1fr))`,
+          }}
         >
           {product.sizes.map((item) => {
             const selected = size === item;

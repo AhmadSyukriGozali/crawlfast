@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useAdminCategories } from "@/features/categories/hooks/useAdminCategories";
 import type { AdminCategory } from "@/features/categories/types";
 
@@ -28,6 +29,9 @@ export default function AdminCategoriesPage() {
 
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AdminCategory | null>(
+    null,
+  );
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -45,18 +49,13 @@ export default function AdminCategoriesPage() {
 
   const activeCount = categories.filter((category) => category.isActive).length;
 
-  async function handleDelete(category: AdminCategory) {
-    if (
-      !window.confirm(
-        `Hapus kategori "${category.name}"? Kategori hanya bisa dihapus jika tidak dipakai produk.`,
-      )
-    ) {
-      return;
-    }
+  async function confirmDelete() {
+    if (!pendingDelete) return;
 
-    setDeletingId(category.id);
-    await deleteCategory(category.id);
+    setDeletingId(pendingDelete.id);
+    await deleteCategory(pendingDelete.id);
     setDeletingId(null);
+    setPendingDelete(null);
   }
 
   const stats = [
@@ -77,7 +76,7 @@ export default function AdminCategoriesPage() {
   ];
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={email}
         loading={loading}
@@ -201,7 +200,7 @@ export default function AdminCategoriesPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#8b8c80]">
+              <span className="grid h-12 w-12 place-items-center rounded-full border border-[#e4dfd2] bg-[#f8f5ed] text-[#6f7064]">
                 <Layers3 size={20} strokeWidth={1.5} aria-hidden="true" />
               </span>
               <p className="mt-4 text-sm font-semibold text-[#3c3d34]">
@@ -227,13 +226,16 @@ export default function AdminCategoriesPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="admin-table">
+                <caption className="sr-only">Daftar kategori</caption>
                 <thead>
                   <tr>
-                    <th>Kategori</th>
-                    <th>Deskripsi</th>
-                    <th>Urutan</th>
-                    <th>Status</th>
-                    <th className="text-right">Aksi</th>
+                    <th scope="col">Kategori</th>
+                    <th scope="col">Deskripsi</th>
+                    <th scope="col">Urutan</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" className="text-right">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -291,7 +293,7 @@ export default function AdminCategoriesPage() {
                           </Link>
                           <button
                             type="button"
-                            onClick={() => void handleDelete(category)}
+                            onClick={() => setPendingDelete(category)}
                             disabled={deletingId === category.id}
                             className="admin-btn admin-btn-danger admin-btn-sm"
                           >
@@ -317,6 +319,20 @@ export default function AdminCategoriesPage() {
           lebih dulu
         </footer>
       </div>
+
+      <ConfirmDialog
+        variant="admin"
+        open={pendingDelete !== null}
+        title="Hapus kategori?"
+        description={
+          pendingDelete
+            ? `Kategori "${pendingDelete.name}" akan dihapus. Kategori hanya bisa dihapus jika tidak dipakai produk.`
+            : ""
+        }
+        busy={deletingId !== null}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }

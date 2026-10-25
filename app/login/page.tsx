@@ -20,7 +20,10 @@ const ASSURANCES = [
 
 export default function LoginPage() {
   return (
-    <div className="admin-auth grid min-h-dvh grid-cols-[minmax(0,1fr)] bg-[#f3f1ea] lg:grid-cols-[1.04fr_1fr]">
+    <main
+      id="main"
+      className="admin-auth grid min-h-dvh grid-cols-[minmax(0,1fr)] bg-[#f3f1ea] lg:grid-cols-[1.04fr_1fr]"
+    >
       <div className="relative hidden overflow-hidden bg-[#171814] lg:block">
         <Image
           src="/editorial/lookbook-01.jpg"
@@ -30,7 +33,7 @@ export default function LoginPage() {
           sizes="52vw"
           className="object-cover opacity-60"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121309] via-[#171814]/70 to-[#171814]/20" />
+        <div className="absolute inset-0 bg-linear-to-t from-[#121309] via-[#171814]/70 to-[#171814]/20" />
         <div
           aria-hidden="true"
           className="absolute inset-0 opacity-70"
@@ -52,7 +55,7 @@ export default function LoginPage() {
           <div className="max-w-md">
             <span
               aria-hidden="true"
-              className="mb-7 block h-px w-16 bg-gradient-to-r from-[#c9a86a] to-transparent"
+              className="mb-7 block h-px w-16 bg-linear-to-r from-[#c9a86a] to-transparent"
             />
 
             <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[#c9a86a]">
@@ -83,7 +86,7 @@ export default function LoginPage() {
             </ul>
           </div>
 
-          <div className="flex items-center justify-between gap-3 text-[9px] uppercase tracking-[0.2em] text-white/25">
+          <div className="flex items-center justify-between gap-3 text-[9px] uppercase tracking-[0.2em] text-white/55">
             <span>© CRAWLFAST</span>
             <span>Admin · Internal</span>
           </div>
@@ -91,7 +94,7 @@ export default function LoginPage() {
       </div>
 
       <div className="relative flex min-w-0 items-center justify-center px-5 py-12 sm:px-8">
-        <div className="w-full min-w-0 max-w-[27rem]">
+        <div className="w-full min-w-0 max-w-108">
           <div className="mb-8 lg:hidden">
             <Logo />
           </div>
@@ -99,7 +102,7 @@ export default function LoginPage() {
           <div className="admin-card overflow-hidden">
             <div
               aria-hidden="true"
-              className="h-px bg-gradient-to-r from-transparent via-[#b08d57] to-transparent"
+              className="h-px bg-linear-to-r from-transparent via-[#b08d57] to-transparent"
             />
 
             <div className="p-6 sm:p-8">
@@ -155,6 +158,6 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

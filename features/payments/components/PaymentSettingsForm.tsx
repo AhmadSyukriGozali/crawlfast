@@ -133,7 +133,7 @@ function PaymentSettingsView({
   );
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={email}
         loading={loading}
@@ -365,7 +365,7 @@ function PaymentSettingsView({
                   maxLength={2000}
                   className="admin-textarea mt-4 font-mono text-[11px] leading-6"
                 />
-                <p className="mt-2 text-right font-mono text-[10px] text-[#b0b0a5]">
+                <p className="mt-2 text-right font-mono text-[10px] text-[#76776b]">
                   {form.whatsappTemplate.length}/2000 karakter
                 </p>
               </section>
@@ -409,7 +409,7 @@ function PaymentSettingsView({
                   {preview}
                 </pre>
 
-                <div className="flex items-center gap-2 border-t border-white/10 px-5 py-3 text-[9px] uppercase tracking-[0.14em] text-white/30">
+                <div className="flex items-center gap-2 border-t border-white/10 px-5 py-3 text-[9px] uppercase tracking-[0.14em] text-white/50">
                   <Terminal size={11} strokeWidth={1.8} aria-hidden="true" />
                   Live preview · placeholder terisi
                 </div>

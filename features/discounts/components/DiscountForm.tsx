@@ -203,7 +203,7 @@ export default function DiscountForm({ discountId }: Props) {
   const displayError = session.error || discountError;
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={session.email}
         loading={loading}

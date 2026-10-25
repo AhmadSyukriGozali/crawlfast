@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,6 +13,7 @@ import {
   Trash2,
   Truck,
 } from "lucide-react";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useCart } from "@/lib/hooks/useCart";
 import { useMounted } from "@/lib/hooks/useMounted";
 import { formatRupiah } from "@/lib/format";
@@ -23,6 +25,7 @@ import {
 
 export default function CartPage() {
   const mounted = useMounted();
+  const [confirmClear, setConfirmClear] = useState(false);
   const {
     items,
     totalItems,
@@ -61,9 +64,7 @@ export default function CartPage() {
             Keranjang <span className="serif-accent">belanja.</span>
           </h1>
         </div>
-        <p className="text-xs text-ink-soft">
-          {totalItems} produk{totalItems === 1 ? "" : ""}
-        </p>
+        <p className="text-xs text-ink-soft">{totalItems} produk</p>
       </header>
 
       {items.length === 0 ? (
@@ -92,11 +93,7 @@ export default function CartPage() {
               </p>
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm("Kosongkan seluruh keranjang?")) {
-                    clearCart();
-                  }
-                }}
+                onClick={() => setConfirmClear(true)}
                 className="text-[10px] uppercase tracking-[0.08em] text-ink-muted underline underline-offset-4 transition-colors hover:text-red-700"
               >
                 Kosongkan
@@ -150,7 +147,11 @@ export default function CartPage() {
                     </div>
 
                     <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-                      <div className="inline-flex h-9 items-center border border-line">
+                      <div
+                        role="group"
+                        aria-label={`Jumlah ${item.name} ukuran ${item.size}`}
+                        className="inline-flex h-9 items-center border border-line"
+                      >
                         <button
                           type="button"
                           onClick={() =>
@@ -160,15 +161,17 @@ export default function CartPage() {
                               item.quantity - 1,
                             )
                           }
+                          disabled={item.quantity <= 1}
                           aria-label={`Kurangi jumlah ${item.name}`}
-                          className="flex h-full w-9 items-center justify-center transition-colors hover:bg-sand"
+                          className="flex h-full w-9 items-center justify-center transition-colors hover:bg-sand disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                           <Minus size={13} />
                         </button>
                         <span
-                          aria-label="Jumlah produk"
+                          aria-live="polite"
                           className="min-w-7 text-center text-xs tabular-nums"
                         >
+                          <span className="sr-only">Jumlah: </span>
                           {item.quantity}
                         </span>
                         <button
@@ -272,6 +275,18 @@ export default function CartPage() {
           </aside>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Kosongkan keranjang?"
+        description="Semua produk di keranjang akan dihapus. Tindakan ini tidak bisa dibatalkan."
+        confirmLabel="Kosongkan"
+        onConfirm={() => {
+          clearCart();
+          setConfirmClear(false);
+        }}
+        onCancel={() => setConfirmClear(false)}
+      />
     </div>
   );
 }

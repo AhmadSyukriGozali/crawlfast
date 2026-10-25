@@ -12,7 +12,7 @@ function LinkColumn({
 }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">
         {title}
       </p>
       <ul className="mt-4 space-y-2.5">
@@ -91,7 +91,7 @@ export default function SiteFooter({
 
         <div className="grid gap-6 border-b border-white/10 py-6 sm:grid-cols-2 sm:items-center">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">
               Pembayaran aman
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -109,7 +109,7 @@ export default function SiteFooter({
           </div>
 
           <div className="sm:text-right">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">
               Diproses oleh
             </p>
             <p className="mt-2 text-sm font-semibold tracking-tight">
@@ -118,7 +118,7 @@ export default function SiteFooter({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 py-6 text-[10px] uppercase tracking-[0.12em] text-white/35 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 py-6 text-[10px] uppercase tracking-[0.12em] text-white/55 sm:flex-row sm:items-center sm:justify-between">
           <p>© CRAWLFAST. All rights reserved.</p>
           <div className="flex flex-wrap gap-4">
             <Link href="/privacy" className="hover:text-white/70">

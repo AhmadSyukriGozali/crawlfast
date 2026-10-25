@@ -119,6 +119,9 @@ export default function CheckoutPage() {
       } catch (loadError) {
         if (cancelled) return;
 
+        // Jangan biarkan tombol submit aktif dengan asumsi metode yang belum
+        // terverifikasi.
+        setPaymentMethods({ midtransEnabled: false, whatsappEnabled: false });
         setPaymentMethodsError(
           loadError instanceof Error
             ? loadError.message
@@ -355,7 +358,6 @@ export default function CheckoutPage() {
         <form
           onSubmit={handleSubmit}
           className="mt-8 grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_400px] lg:gap-14"
-          noValidate={false}
         >
           <div className="space-y-10">
             <section>
@@ -549,8 +551,10 @@ export default function CheckoutPage() {
                   CRAWLFAST melalui halaman kontak.
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {paymentMethods.midtransEnabled && (
+                <fieldset>
+                  <legend className="sr-only">Pilih metode pembayaran</legend>
+                  <div className="space-y-3">
+                    {paymentMethods.midtransEnabled && (
                     <label
                       className={`flex cursor-pointer items-start gap-3 border p-4 transition ${
                         paymentMethod === "midtrans"
@@ -606,7 +610,8 @@ export default function CheckoutPage() {
                       </span>
                     </label>
                   )}
-                </div>
+                  </div>
+                </fieldset>
               )}
             </section>
 
@@ -637,6 +642,7 @@ export default function CheckoutPage() {
                 <Link
                   href="/terms"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sage underline underline-offset-4"
                 >
                   syarat & ketentuan
@@ -645,6 +651,7 @@ export default function CheckoutPage() {
                 <Link
                   href="/privacy"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sage underline underline-offset-4"
                 >
                   kebijakan privasi

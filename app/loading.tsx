@@ -1,18 +1,16 @@
+/**
+ * Fallback netral untuk rute di luar storefront (mis. /login). Storefront punya
+ * `app/(store)/loading.tsx` sendiri agar header dan footer tetap tampil.
+ */
 export default function Loading() {
   return (
-    <div className="container-page animate-pulse py-10">
-      <div className="h-3 w-24 rounded bg-sand" />
-      <div className="mt-5 h-12 w-2/3 max-w-xl rounded bg-sand" />
-      <div className="mt-4 h-4 w-full max-w-md rounded bg-sand" />
-      <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
-          <div key={index}>
-            <div className="aspect-4/5 bg-sand" />
-            <div className="mt-4 h-3 w-16 rounded bg-sand" />
-            <div className="mt-2 h-4 w-3/4 rounded bg-sand" />
-          </div>
-        ))}
-      </div>
+    <div
+      className="flex min-h-dvh animate-pulse flex-col items-center justify-center gap-4 bg-cream px-5"
+      aria-busy="true"
+    >
+      <span className="sr-only">Memuat halaman…</span>
+      <div className="h-6 w-40 rounded bg-sand" />
+      <div className="h-3 w-56 max-w-full rounded bg-sand" />
     </div>
   );
 }

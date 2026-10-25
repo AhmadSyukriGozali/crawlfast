@@ -99,7 +99,7 @@ export default function StatusChart({ orders }: { orders: Order[] }) {
                     </span>
                     <span className="shrink-0 font-mono text-[10.5px] text-[#6b6c61]">
                       {status.count}
-                      <span className="ml-1 text-[#b0b0a5]">
+                      <span className="ml-1 text-[#76776b]">
                         {Math.round(status.percentage)}%
                       </span>
                     </span>

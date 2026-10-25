@@ -180,7 +180,7 @@ export default function OrderDetailClient() {
     useAdminOrderDetail(id);
 
   return (
-    <main className="admin-shell admin-main">
+    <main id="main" className="admin-shell admin-main">
       <AdminHeader
         email={session.email}
         loading={loading || session.loading}
@@ -369,13 +369,22 @@ export default function OrderDetailClient() {
 
                 <div className="overflow-x-auto">
                   <table className="admin-table min-w-[520px]">
+                    <caption className="sr-only">
+                      Rincian item pesanan
+                    </caption>
                     <thead>
                       <tr>
-                        <th>Produk</th>
-                        <th>Ukuran</th>
-                        <th className="text-right">Harga</th>
-                        <th className="text-right">Qty</th>
-                        <th className="text-right">Subtotal</th>
+                        <th scope="col">Produk</th>
+                        <th scope="col">Ukuran</th>
+                        <th scope="col" className="text-right">
+                          Harga
+                        </th>
+                        <th scope="col" className="text-right">
+                          Qty
+                        </th>
+                        <th scope="col" className="text-right">
+                          Subtotal
+                        </th>
                       </tr>
                     </thead>
                     <tbody>

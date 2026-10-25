@@ -29,6 +29,11 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 - Akses dibatasi allowlist `ADMIN_EMAIL`/`ADMIN_EMAILS` dan email harus terverifikasi.
 - Public signup tidak disediakan di UI; buat admin melalui dashboard Supabase.
 - Password minimal 8 karakter, reset password memakai flow PKCE.
+- Halaman `/login/reset` hanya menerima sesi yang berasal dari tautan recovery; sesi login biasa tidak dapat mengganti password tanpa link email.
+- Tautan recovery bersifat sekali pakai dan kedaluwarsa. Setelah password diperbarui, seluruh refresh token dicabut (`signOut({ scope: "global" })`).
+- Login memverifikasi allowlist lewat `/api/admin/me` sebelum membuka shell admin.
+- Rate limit pengiriman email recovery dan CAPTCHA wajib diatur di Supabase Auth karena request reset dikirim langsung dari browser.
+- Mailbox admin wajib memakai 2FA; tautan reset hanya sekuat keamanan inbox penerima.
 
 ### Input & API
 - Validasi tipe, panjang, pola email/telepon/kode pos, ukuran, dan jumlah produk.
@@ -65,6 +70,13 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 - [ ] `SUPABASE_SECRET_KEY` tidak ada di bundle client (cek Network/JS).
 - [ ] Public signup Supabase dimatikan.
 - [ ] Email admin terverifikasi dan allowlist benar.
+- [ ] Rate limit email recovery di Supabase Auth sudah diatur (per email dan per project).
+- [ ] CAPTCHA auth (Cloudflare Turnstile / hCaptcha) aktif (disarankan).
+- [ ] Mailbox admin memakai 2FA dan alamatnya tidak dipublikasikan.
+- [ ] Custom SMTP aktif dengan SPF, DKIM, dan DMARC untuk domain pengirim.
+- [ ] Refresh token rotation aktif dan JWT expiry admin ≤ 1 jam.
+- [ ] Opsi "require reauthentication for password change" aktif bila tersedia.
+- [ ] Uji `/login/reset` tanpa link email dari sesi login aktif → harus ditolak.
 - [ ] RLS aktif; tidak ada policy `anon` pada `orders`, `order_items`, `discounts`, dan `payment_settings`; `categories` hanya punya policy baca untuk kategori aktif.
 - [ ] Notification URL Midtrans sudah diarahkan ke domain produksi.
 - [ ] Metode pembayaran di `/admin/payments` sudah diuji (Midtrans dan/atau WhatsApp), termasuk template dan nomor admin.
@@ -78,5 +90,7 @@ Kami akan mengonfirmasi laporan dalam 2 hari kerja dan berusaha menutupnya secep
 ## Batasan yang Diketahui
 
 - Rate limiter in-memory hanya fallback untuk pengembangan lokal; tanpa Upstash Redis, limit tidak konsisten antar instance serverless.
+- Access token yang sudah terbit tetap berlaku sampai kedaluwarsa meski refresh token dicabut saat reset password; perpendek JWT expiry bila butuh pencabutan lebih cepat.
+- Tautan recovery PKCE hanya berfungsi di browser yang sama dengan tempat permintaan reset dibuat (code verifier tersimpan di browser tersebut).
 - CSP masih mengizinkan `'unsafe-inline'` untuk script karena kebutuhan runtime Next.js; pertimbangkan nonce/strict CSP jika arsitektur memungkinkan.
 - Keranjang/wishlist disimpan di `localStorage` (tidak sensitif, tetapi dapat dimodifikasi pengguna; server tetap memvalidasi semua data checkout).
